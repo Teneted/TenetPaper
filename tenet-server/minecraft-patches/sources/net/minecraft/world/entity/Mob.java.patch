@@ -1,0 +1,22 @@
+--- a/net/minecraft/world/entity/Mob.java
++++ b/net/minecraft/world/entity/Mob.java
+@@ -12,6 +_,8 @@
+ import java.util.Set;
+ import java.util.function.Predicate;
+ import javax.annotation.Nullable;
++
++import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+ import net.minecraft.core.BlockPos;
+ import net.minecraft.core.Holder;
+ import net.minecraft.core.Vec3i;
+@@ -1383,7 +_,9 @@
+                 }
+                 // CraftBukkit end
+                 if (this.level() instanceof ServerLevel serverLevel) {
+-                    serverLevel.addFreshEntity(mob, creatureSpawnReason); // CraftBukkit
++                    if (serverLevel.addFreshEntity(mob, creatureSpawnReason)) {
++                        ServerLivingEntityEvents.MOB_CONVERSION.invoker().onConversion(this, mob, conversionParams);
++                    }
+                 }
+ 
+                 if (conversionParams.type().shouldDiscardAfterConversion()) {

@@ -1,10 +1,12 @@
 --- a/net/minecraft/server/players/PlayerList.java
 +++ b/net/minecraft/server/players/PlayerList.java
-@@ -19,6 +_,8 @@
+@@ -19,6 +_,10 @@
  import java.util.function.Function;
  import java.util.function.Predicate;
  import javax.annotation.Nullable;
 +
++import net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents;
++import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 +import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
  import net.minecraft.ChatFormatting;
  import net.minecraft.FileUtil;
@@ -41,6 +43,34 @@
          serverGamePacketListenerImpl.send(
              new ClientboundUpdateRecipesPacket(recipeManager.getSynchronizedItemProperties(), recipeManager.getSynchronizedStonecutterRecipes())
          );
+@@ -327,6 +_,7 @@
+             );
+         }
+         // Paper end - Send empty chunk
++        ServerPlayerEvents.JOIN.invoker().onJoin(player);
+     }
+ 
+     public void updateEntireScoreboard(ServerScoreboard scoreboard, ServerPlayer player) {
+@@ -519,6 +_,7 @@
+         // This removes the scoreboard (and player reference) for the specific player in the manager
+         this.cserver.getScoreboardManager().removePlayer(player.getBukkitEntity());
+         // CraftBukkit end
++        ServerPlayerEvents.LEAVE.invoker().onLeave(player);
+         return playerQuitEvent.quitMessage(); // Paper - Adventure
+     }
+ 
+@@ -698,6 +_,11 @@
+         ).callEvent();
+         // Paper end
+ 
++        ServerPlayerEvents.AFTER_RESPAWN.invoker().afterRespawn(player, serverPlayer, keepInventory);
++
++        if (player.level() != serverPlayer.level()) {
++            ServerEntityLevelChangeEvents.AFTER_PLAYER_CHANGE_LEVEL.invoker().afterChangeLevel(serverPlayer, player.level(), serverPlayer.level());
++        }
+         return serverPlayer;
+     }
+ 
 @@ -1262,6 +_,9 @@
          // Paper start - API for updating recipes on clients
      }

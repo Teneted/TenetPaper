@@ -1,15 +1,89 @@
 --- a/net/minecraft/world/entity/LivingEntity.java
 +++ b/net/minecraft/world/entity/LivingEntity.java
-@@ -30,6 +_,9 @@
+@@ -30,6 +_,13 @@
  import java.util.function.Predicate;
  import javax.annotation.Nonnull;
  import javax.annotation.Nullable;
 +
 +import net.fabricmc.fabric.api.block.v1.BlockFunctionalityTags;
++import net.fabricmc.fabric.api.entity.event.v1.EntityElytraEvents;
++import net.fabricmc.fabric.api.entity.event.v1.EntitySleepEvents;
++import net.fabricmc.fabric.api.entity.event.v1.ServerEntityCombatEvents;
++import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 +import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
  import net.minecraft.BlockUtil;
  import net.minecraft.Util;
  import net.minecraft.advancements.CriteriaTriggers;
+@@ -74,6 +_,7 @@
+ import net.minecraft.util.profiling.ProfilerFiller;
+ import net.minecraft.world.Difficulty;
+ import net.minecraft.world.InteractionHand;
++import net.minecraft.world.InteractionResult;
+ import net.minecraft.world.damagesource.CombatRules;
+ import net.minecraft.world.damagesource.CombatTracker;
+ import net.minecraft.world.damagesource.DamageSource;
+@@ -108,6 +_,7 @@
+ import net.minecraft.world.item.enchantment.effects.EnchantmentLocationBasedEffect;
+ import net.minecraft.world.item.equipment.Equippable;
+ import net.minecraft.world.level.ClipContext;
++import net.minecraft.world.level.CollisionGetter;
+ import net.minecraft.world.level.GameRules;
+ import net.minecraft.world.level.Level;
+ import net.minecraft.world.level.block.BedBlock;
+@@ -1420,6 +_,9 @@
+         } else if (damageSource.is(DamageTypeTags.IS_FIRE) && this.hasEffect(MobEffects.FIRE_RESISTANCE)) {
+             return false;
+         } else {
++            if (!ServerLivingEntityEvents.ALLOW_DAMAGE.invoker().allowDamage(this, damageSource, amount)) {
++                return false;
++            }
+             if (this.isSleeping()) {
+                 this.stopSleeping();
+             }
+@@ -1528,7 +_,7 @@
+                 }
+             }
+ 
+-            if (this.isDeadOrDying()) {
++            if (this.isDeadOrDying() && ServerLivingEntityEvents.ALLOW_DEATH.invoker().allowDeath(this, damageSource, amount)) {
+                 if (!this.checkTotemDeathProtection(damageSource)) {
+                     // Paper start - moved into CraftEventFactory event caller for cancellable death event
+                     this.silentDeath = !flag1; // mark entity as dying silently
+@@ -1563,6 +_,10 @@
+                 CriteriaTriggers.PLAYER_HURT_ENTITY.trigger(serverPlayerx, this, damageSource, originAmount, amount, flag);
+             }
+ 
++            if (!isDeadOrDying()) {
++                ServerLivingEntityEvents.AFTER_DAMAGE.invoker().afterDamage(this, damageSource, originAmount, amount, flag);
++            }
++
+             return flag2;
+         }
+     }
+@@ -1837,6 +_,7 @@
+                 // Paper - move below into if for onKill
+                 // Paper start
+                 if (entity instanceof net.minecraft.world.entity.monster.Creeper creeper) { // Creeper has logic for drops we need capture
++                    ServerEntityCombatEvents.AFTER_KILLED_OTHER_ENTITY.invoker().afterKilledOtherEntity(serverLevel, creeper, this, damageSource);
+                     creeper.killedEntity((ServerLevel) this.level(), this, damageSource);
+                 }
+                 org.bukkit.event.entity.EntityDeathEvent deathEvent = this.dropAllDeathLoot(serverLevel, damageSource);
+@@ -1863,6 +_,7 @@
+ 
+                     this.getCombatTracker().recheckStatus();
+                     if (entity != null) {
++                        ServerEntityCombatEvents.AFTER_KILLED_OTHER_ENTITY.invoker().afterKilledOtherEntity(serverLevel, entity, this, damageSource);
+                         entity.killedEntity((ServerLevel) this.level(), this, damageSource);
+                     }
+                     this.gameEvent(GameEvent.ENTITY_DIE);
+@@ -1879,6 +_,7 @@
+ 
+             // Paper start
+             if (this.dead) { // Paper
++                ServerLivingEntityEvents.AFTER_DEATH.invoker().afterDeath(this, damageSource);
+                 this.level().broadcastEntityEvent(this, EntityEvent.DEATH);
+ 
+             this.setPose(Pose.DYING);
 @@ -2181,6 +_,18 @@
              return false;
          } else {
@@ -38,3 +112,136 @@
                  map.put(equipmentSlot, itemBySlot);
                  equipmentChanges.put(org.bukkit.craftbukkit.CraftEquipmentSlot.getSlot(equipmentSlot), new EquipmentChangeImpl(oldItem, newItem)); // Paper - EntityEquipmentChangedEvent
                  AttributeMap attributes = this.getAttributes();
+@@ -3659,6 +_,19 @@
+                         .stream()
+                         .filter(equipmentSlot1 -> canGlideUsing(this.getItemBySlot(equipmentSlot1), equipmentSlot1))
+                         .toList();
++                    if (!EntityElytraEvents.ALLOW.invoker().allowElytraFlight(this)) {
++                        // The entity is already fall flying by now, we just need to stop it.
++                        if (!level().isClientSide()) {
++                            setSharedFlag(Entity.FLAG_FALL_FLYING, false);
++                        }
++
++                        return;
++                    }
++
++                    if (EntityElytraEvents.CUSTOM.invoker().useCustomElytra(this, true)) {
++                        // The entity is already fall flying by now, so all we need to do is an early return to bypass vanilla's own elytra check.
++                        return;
++                    }
+                     EquipmentSlot equipmentSlot = Util.getRandom(list, this.random);
+                     this.getItemBySlot(equipmentSlot).hurtAndBreak(1, this, equipmentSlot);
+                 }
+@@ -3670,6 +_,13 @@
+ 
+     protected boolean canGlide() {
+         if (!this.onGround() && !this.isPassenger() && !this.hasEffect(MobEffects.LEVITATION)) {
++            if (!EntityElytraEvents.ALLOW.invoker().allowElytraFlight(this)) {
++                return false; // Return to prevent the rest of this injector from running.
++            }
++
++            if (EntityElytraEvents.CUSTOM.invoker().useCustomElytra(this, false)) {
++                return true;
++            }
+             for (EquipmentSlot equipmentSlot : EquipmentSlot.VALUES) {
+                 if (canGlideUsing(this.getItemBySlot(equipmentSlot), equipmentSlot)) {
+                     return true;
+@@ -4431,8 +_,11 @@
+         }
+ 
+         BlockState blockState = this.level().getBlockState(pos);
++        InteractionResult result = EntitySleepEvents.ALLOW_BED.invoker().allowBed(this, pos, blockState, blockState.getBlock() instanceof BedBlock);
++        // If a valid bed, replace with vanilla red bed so that the vanilla instanceof check succeeds.
++        blockState = result.consumesAction() ? Blocks.RED_BED.defaultBlockState() : blockState;
+         if (blockState.getBlock() instanceof BedBlock) {
+-            this.level().setBlock(pos, blockState.setValue(BedBlock.OCCUPIED, true), Block.UPDATE_ALL);
++            setOccupiedState(this.level(), pos, blockState.setValue(BedBlock.OCCUPIED, true), Block.UPDATE_ALL);
+         }
+ 
+         this.setPose(Pose.SLEEPING);
+@@ -4440,6 +_,7 @@
+         this.setSleepingPos(pos);
+         this.setDeltaMovement(Vec3.ZERO);
+         this.hasImpulse = true;
++        EntitySleepEvents.START_SLEEPING.invoker().onStartSleeping(this, pos);
+     }
+ 
+     private void setPosToBed(BlockPos pos) {
+@@ -4447,16 +_,30 @@
+     }
+ 
+     private boolean checkBedExists() {
+-        return this.getSleepingPos().map(blockPos -> this.level().getBlockState(blockPos).getBlock() instanceof BedBlock).orElse(false);
++        return this.getSleepingPos().map(blockPos -> {
++            BlockState bedState = this.level().getBlockState(blockPos);
++            InteractionResult result = EntitySleepEvents.ALLOW_BED.invoker().allowBed(this, blockPos, bedState, this.level().getBlockState(blockPos).getBlock() instanceof BedBlock);
++            if (result != InteractionResult.PASS) {
++                return result.consumesAction();
++            }
++            return this.level().getBlockState(blockPos).getBlock() instanceof BedBlock;
++        }).orElse(false);
+     }
+ 
+     public void stopSleeping() {
++        BlockPos sleepingPos = getSleepingPos().orElse(null);
++
++        // If actually asleep - this method is often called with data loading, syncing etc. "just to be sure"
++        if (sleepingPos != null) {
++            EntitySleepEvents.STOP_SLEEPING.invoker().onStopSleeping(this, sleepingPos);
++        }
+         this.getSleepingPos().filter(this.level()::hasChunkAt).ifPresent(blockPos -> {
+-            BlockState blockState = this.level().getBlockState(blockPos);
++            InteractionResult result = EntitySleepEvents.ALLOW_BED.invoker().allowBed(this, sleepingPos, this.level().getBlockState(blockPos), this.level().getBlockState(blockPos).getBlock() instanceof BedBlock);
++            BlockState blockState = result.consumesAction() ? Blocks.RED_BED.defaultBlockState() : this.level().getBlockState(blockPos);
+             if (blockState.getBlock() instanceof BedBlock) {
+                 Direction direction = blockState.getValue(BedBlock.FACING);
+-                this.level().setBlock(blockPos, blockState.setValue(BedBlock.OCCUPIED, false), Block.UPDATE_ALL);
+-                Vec3 vec31 = BedBlock.findStandUpPosition(this.getType(), this.level(), blockPos, direction, this.getYRot()).orElseGet(() -> {
++                setOccupiedState(this.level(), blockPos, blockState.setValue(BedBlock.OCCUPIED, false), Block.UPDATE_ALL);
++                Vec3 vec31 = modifyWakeUpPosition(this.getType(), this.level(), blockPos, direction, this.getYRot()).orElseGet(() -> {
+                     BlockPos blockPos1 = blockPos.above();
+                     return new Vec3(blockPos1.getX() + 0.5, blockPos1.getY() + 0.1, blockPos1.getZ() + 0.5);
+                 });
+@@ -4473,10 +_,41 @@
+         this.clearSleepingPos();
+     }
+ 
++    private Optional<Vec3> modifyWakeUpPosition(EntityType<?> type, CollisionGetter level, BlockPos pos, Direction direction, float yaw) {
++        Optional<Vec3> original = Optional.empty();
++        BlockState bedState = level.getBlockState(pos);
++
++        if (bedState.getBlock() instanceof BedBlock) {
++            original = BedBlock.findStandUpPosition(type, level, pos, direction, yaw);
++        }
++
++        Vec3 newPos = EntitySleepEvents.MODIFY_WAKE_UP_POSITION.invoker().modifyWakeUpPosition((LivingEntity) (Object) this, pos, bedState, original.orElse(null));
++        return Optional.ofNullable(newPos);
++    }
++
++    private boolean setOccupiedState(Level level, BlockPos pos, BlockState state, int flags) {
++        // This might have been replaced by a red bed above, so we get it again.
++        // Note that we *need* to replace it so the state.with(OCCUPIED, ...) call doesn't crash
++        // when the bed doesn't have the property.
++        BlockState originalState = level.getBlockState(pos);
++        boolean occupied = state.getValue(BedBlock.OCCUPIED);
++
++        if (EntitySleepEvents.SET_BED_OCCUPATION_STATE.invoker().setBedOccupationState((LivingEntity) (Object) this, pos, originalState, occupied)) {
++            return true;
++        } else if (originalState.hasProperty(BedBlock.OCCUPIED)) {
++            // This check is widened from (instanceof BedBlock) to a property check to allow modded blocks
++            // that don't use the event.
++            return level.setBlock(pos, originalState.setValue(BedBlock.OCCUPIED, occupied), flags);
++        } else {
++            return false;
++        }
++    }
++
+     @Nullable
+     public Direction getBedOrientation() {
+         BlockPos blockPos = this.getSleepingPos().orElse(null);
+-        return blockPos != null ? BedBlock.getBedOrientation(this.level(), blockPos) : null;
++        Direction direction = blockPos != null ? BedBlock.getBedOrientation(this.level(), blockPos) : null;
++        return EntitySleepEvents.MODIFY_SLEEPING_DIRECTION.invoker().modifySleepDirection((LivingEntity) (Object) this, blockPos, direction);
+     }
+ 
+     @Override

@@ -1,0 +1,101 @@
+--- a/net/minecraft/server/level/ServerPlayer.java
++++ b/net/minecraft/server/level/ServerPlayer.java
+@@ -24,6 +_,12 @@
+ import java.util.stream.Collectors;
+ import javax.annotation.Nonnull;
+ import javax.annotation.Nullable;
++
++import net.fabricmc.fabric.api.entity.event.v1.EntitySleepEvents;
++import net.fabricmc.fabric.api.entity.event.v1.ServerEntityCombatEvents;
++import net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents;
++import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
++import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
+ import net.minecraft.ChatFormatting;
+ import net.minecraft.CrashReport;
+ import net.minecraft.CrashReportCategory;
+@@ -115,6 +_,7 @@
+ import net.minecraft.world.Container;
+ import net.minecraft.world.Difficulty;
+ import net.minecraft.world.InteractionHand;
++import net.minecraft.world.InteractionResult;
+ import net.minecraft.world.MenuProvider;
+ import net.minecraft.world.damagesource.DamageSource;
+ import net.minecraft.world.damagesource.DamageTypes;
+@@ -1231,6 +_,13 @@
+         // CraftBukkit end
+ 
+         this.level().getCraftServer().getScoreboardManager().forAllObjectives(ObjectiveCriteria.DEATH_COUNT, this, ScoreAccess::increment); // CraftBukkit - Get our scores instead
++        final Entity attacker = damageSource.getEntity();
++
++        // If the damage source that killed the player was an entity, then fire the event.
++        if (attacker != null) {
++            attacker.killedEntity(this.level(), (ServerPlayer) (Object) this, damageSource);
++            ServerEntityCombatEvents.AFTER_KILLED_OTHER_ENTITY.invoker().afterKilledOtherEntity(this.level(), attacker, (ServerPlayer) (Object) this, damageSource);
++        }
+         LivingEntity killCredit = this.getKillCredit();
+         if (killCredit != null) {
+             this.awardStat(Stats.ENTITY_KILLED_BY.get(killCredit.getType()));
+@@ -1248,6 +_,7 @@
+         this.getCombatTracker().recheckStatus();
+         this.setLastDeathLocation(Optional.of(GlobalPos.of(this.level().dimension(), this.blockPosition())));
+         this.setClientLoaded(false);
++        ServerLivingEntityEvents.AFTER_DEATH.invoker().afterDeath((ServerPlayer) (Object) this, damageSource);
+     }
+ 
+     private void tellNeutralMobsThatIDied() {
+@@ -1607,6 +_,7 @@
+         if (maindimensionkey1 != Level.NETHER) { // CraftBukkit
+             this.enteredNetherPosition = null;
+         }
++        ServerEntityLevelChangeEvents.AFTER_PLAYER_CHANGE_LEVEL.invoker().afterChangeLevel((ServerPlayer) (Object) this, level, this.level());
+     }
+ 
+     @Override
+@@ -1634,7 +_,12 @@
+             this.setRespawnPosition(
+                 new ServerPlayer.RespawnConfig(LevelData.RespawnData.of(this.level().dimension(), bedPos, this.getYRot(), this.getXRot()), false), true, com.destroystokyo.paper.event.player.PlayerSetSpawnEvent.Cause.BED // Paper - Add PlayerSetSpawnEvent
+             );
+-            if (this.level().isBrightOutside()) {
++            boolean isDay = this.level().isBrightOutside();
++            InteractionResult result = EntitySleepEvents.ALLOW_SLEEP_TIME.invoker().allowSleepTime(this, bedPos, !isDay);
++            if (result != InteractionResult.PASS) {
++                isDay = !result.consumesAction(); // true from the event = night-like conditions, so we have to invert
++            }
++            if (isDay) {
+                 return Either.left(Player.BedSleepingProblem.NOT_POSSIBLE_NOW);
+             } else {
+                 if (!this.isCreative()) {
+@@ -1647,7 +_,10 @@
+                             new AABB(vec3.x() - 8.0, vec3.y() - 5.0, vec3.z() - 8.0, vec3.x() + 8.0, vec3.y() + 5.0, vec3.z() + 8.0),
+                             monster -> monster.isPreventingPlayerRest(this.level(), this)
+                         );
+-                    if (!entitiesOfClass.isEmpty()) {
++                    boolean vanillaResult = entitiesOfClass.isEmpty();
++                    InteractionResult monstersResult = EntitySleepEvents.ALLOW_NEARBY_MONSTERS.invoker().allowNearbyMonsters(this, bedPos, vanillaResult);
++                    vanillaResult = result != InteractionResult.PASS ? monstersResult.consumesAction() : vanillaResult;
++                    if (!vanillaResult) {
+                         return Either.left(Player.BedSleepingProblem.NOT_SAFE);
+                     }
+                 }
+@@ -1660,7 +_,12 @@
+ 
+     @Override
+     public Either<net.minecraft.world.entity.player.Player.BedSleepingProblem, Unit> startSleepInBed(BlockPos bedPos, boolean force) {
+-        Direction direction = this.level().getBlockState(bedPos).getValue(HorizontalDirectionalBlock.FACING);
++        BlockState blockState = this.level().getBlockState(bedPos);
++        Direction direction = (Direction) (blockState.hasProperty(HorizontalDirectionalBlock.FACING) ? blockState.getValue(HorizontalDirectionalBlock.FACING) : null);
++        Direction dir = EntitySleepEvents.MODIFY_SLEEPING_DIRECTION.invoker().modifySleepDirection((LivingEntity) (Object) this, bedPos, direction);
++        if (dir == null) {
++            return Either.left(Player.BedSleepingProblem.OTHER_PROBLEM);
++        }
+         Either<net.minecraft.world.entity.player.Player.BedSleepingProblem, Unit> bedResult = this.getBedResult(bedPos, direction);
+ 
+         if (bedResult.left().orElse(null) == net.minecraft.world.entity.player.Player.BedSleepingProblem.OTHER_PROBLEM) {
+@@ -2157,6 +_,7 @@
+         this.setShoulderEntityLeft(that.getShoulderEntityLeft());
+         this.setShoulderEntityRight(that.getShoulderEntityRight());
+         this.setLastDeathLocation(that.getLastDeathLocation());
++        ServerPlayerEvents.COPY_FROM.invoker().copyFromPlayer(that, (ServerPlayer) (Object) this, keepEverything);
+     }
+ 
+     @Override

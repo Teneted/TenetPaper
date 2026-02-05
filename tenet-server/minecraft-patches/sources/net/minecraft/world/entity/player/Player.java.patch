@@ -1,0 +1,33 @@
+--- a/net/minecraft/world/entity/player/Player.java
++++ b/net/minecraft/world/entity/player/Player.java
+@@ -13,6 +_,8 @@
+ import java.util.function.Predicate;
+ import javax.annotation.Nonnull;
+ import javax.annotation.Nullable;
++
++import net.fabricmc.fabric.api.entity.event.v1.EntitySleepEvents;
+ import net.minecraft.Util;
+ import net.minecraft.core.BlockPos;
+ import net.minecraft.core.Direction;
+@@ -1344,6 +_,11 @@
+ 
+     public Either<Player.BedSleepingProblem, Unit> startSleepInBed(BlockPos bedPos, boolean force) {
+         // CraftBukkit end
++        Player.BedSleepingProblem failureReason = EntitySleepEvents.ALLOW_SLEEPING.invoker().allowSleep((Player) (Object) this, bedPos);
++
++        if (failureReason != null) {
++            return Either.left(failureReason);
++        }
+         this.startSleeping(bedPos);
+         this.sleepCounter = 0;
+         return Either.right(Unit.INSTANCE);
+@@ -1364,6 +_,9 @@
+     }
+ 
+     public boolean isSleepingLongEnough() {
++        if (this.isSleeping() && this.sleepCounter >= 100) {
++            return EntitySleepEvents.ALLOW_RESETTING_TIME.invoker().allowResettingTime(this);
++        }
+         return this.isSleeping() && this.sleepCounter >= 100;
+     }
+ 
