@@ -1,0 +1,20 @@
+--- a/net/minecraft/world/level/block/Block.java
++++ b/net/minecraft/world/level/block/Block.java
+@@ -18,6 +_,8 @@
+ import java.util.stream.Collectors;
+ import java.util.stream.IntStream;
+ import javax.annotation.Nullable;
++
++import net.fabricmc.fabric.api.block.v1.FabricBlock;
+ import net.minecraft.SharedConstants;
+ import net.minecraft.core.BlockPos;
+ import net.minecraft.core.Direction;
+@@ -70,7 +_,7 @@
+ import net.minecraft.world.phys.shapes.VoxelShape;
+ import org.slf4j.Logger;
+ 
+-public class Block extends BlockBehaviour implements ItemLike {
++public class Block extends BlockBehaviour implements ItemLike, FabricBlock {
+     public static final MapCodec<Block> CODEC = simpleCodec(Block::new);
+     private static final Logger LOGGER = LogUtils.getLogger();
+     private final Holder.Reference<Block> builtInRegistryHolder = BuiltInRegistries.BLOCK.createIntrusiveHolder(this);

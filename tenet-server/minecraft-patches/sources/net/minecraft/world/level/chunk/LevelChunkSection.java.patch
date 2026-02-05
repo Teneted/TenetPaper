@@ -1,0 +1,46 @@
+--- a/net/minecraft/world/level/chunk/LevelChunkSection.java
++++ b/net/minecraft/world/level/chunk/LevelChunkSection.java
+@@ -6,6 +_,7 @@
+ import net.minecraft.world.level.biome.Biome;
+ import net.minecraft.world.level.biome.BiomeResolver;
+ import net.minecraft.world.level.biome.Climate;
++import net.minecraft.world.level.block.Blocks;
+ import net.minecraft.world.level.block.state.BlockState;
+ import net.minecraft.world.level.material.FluidState;
+ 
+@@ -138,7 +_,7 @@
+ 
+         FluidState fluidState = blockState.getFluidState();
+         FluidState fluidState1 = state.getFluidState();
+-        if (!blockState.isAir()) {
++        if (!(blockState.is(Blocks.AIR) || blockState.is(Blocks.CAVE_AIR) || blockState.is(Blocks.VOID_AIR))) {// Fabric - Makes Chunk Sections not have isAir = true modded blocks be replaced with AIR against their will.
+             this.nonEmptyBlockCount--;
+             if (blockState.isRandomlyTicking()) {
+                 this.tickingBlockCount--;
+@@ -149,7 +_,7 @@
+             this.tickingFluidCount--;
+         }
+ 
+-        if (!state.isAir()) {
++        if (!(state.is(Blocks.AIR) || state.is(Blocks.CAVE_AIR) || state.is(Blocks.VOID_AIR))) {// Fabric - Makes Chunk Sections not have isAir = true modded blocks be replaced with AIR against their will.
+             this.nonEmptyBlockCount++;
+             if (state.isRandomlyTicking()) {
+                 this.tickingBlockCount++;
+@@ -190,7 +_,7 @@
+         this.specialCollidingBlocks = (short)0;
+         this.tickingBlocks.clear();
+ 
+-        if (this.maybeHas((final BlockState state) -> !state.isAir())) {
++        if (this.maybeHas((final BlockState state) -> !(state.is(Blocks.AIR) || state.is(Blocks.CAVE_AIR) || state.is(Blocks.VOID_AIR)))) {// Fabric - Makes Chunk Sections not have isAir = true modded blocks be replaced with AIR against their will.
+             final PalettedContainer.Data<BlockState> data = this.states.data;
+             final Palette<BlockState> palette = data.palette();
+             final int paletteSize = palette.getSize();
+@@ -212,7 +_,7 @@
+ 
+                 final BlockState state = palette.valueFor(paletteIdx);
+ 
+-                if (state.isAir()) {
++                if (!(state.is(Blocks.AIR) || state.is(Blocks.CAVE_AIR) || state.is(Blocks.VOID_AIR))) {// Fabric - Makes Chunk Sections not have isAir = true modded blocks be replaced with AIR against their will.
+                     continue;
+                 }
+ 

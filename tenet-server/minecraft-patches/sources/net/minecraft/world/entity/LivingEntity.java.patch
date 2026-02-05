@@ -1,0 +1,30 @@
+--- a/net/minecraft/world/entity/LivingEntity.java
++++ b/net/minecraft/world/entity/LivingEntity.java
+@@ -30,6 +_,8 @@
+ import java.util.function.Predicate;
+ import javax.annotation.Nonnull;
+ import javax.annotation.Nullable;
++
++import net.fabricmc.fabric.api.block.v1.BlockFunctionalityTags;
+ import net.minecraft.BlockUtil;
+ import net.minecraft.Util;
+ import net.minecraft.advancements.CriteriaTriggers;
+@@ -2181,6 +_,18 @@
+             return false;
+         } else {
+             BlockState blockState = this.level().getBlockState(pos.below());
++            if (blockState.is(BlockFunctionalityTags.CAN_CLIMB_TRAPDOOR_ABOVE)) {
++                if (blockState.getBlock() instanceof LadderBlock) {
++                    // Check that the ladder and trapdoor are placed in the same direction.
++                    // Vanilla does the same check for the normal ladder block.
++                    if (blockState.getValue(LadderBlock.FACING) == state.getValue(TrapDoorBlock.FACING)) {
++                        return true;
++                    }
++                } else {
++                    // Don't do any checks for other blocks. They might not even have the facing property.
++                    return true;
++                }
++            }
+             return blockState.is(Blocks.LADDER) && blockState.getValue(LadderBlock.FACING) == state.getValue(TrapDoorBlock.FACING);
+         }
+     }
