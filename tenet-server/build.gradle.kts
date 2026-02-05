@@ -25,6 +25,7 @@ paperweight {
 
     val tenet = forks.register("tenet") {
         upstream.patchDir("paperServer") {
+            upstreamPath = "paper-server"
             excludes = setOf("src/minecraft", "patches", "build.gradle.kts")
             patchesDir = rootDirectory.dir("tenet-server/paper-patches")
             outputDir = rootDirectory.dir("paper-server")
