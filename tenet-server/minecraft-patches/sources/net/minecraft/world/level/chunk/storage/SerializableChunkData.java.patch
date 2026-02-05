@@ -1,0 +1,11 @@
+--- a/net/minecraft/world/level/chunk/storage/SerializableChunkData.java
++++ b/net/minecraft/world/level/chunk/storage/SerializableChunkData.java
+@@ -750,7 +_,7 @@
+             ResourceLocation resourceLocation = ResourceLocation.tryParse(string);
+             Structure structure = registry.getValue(resourceLocation);
+             if (structure == null) {
+-                LOGGER.warn("Found reference to unknown structure '{}' in chunk {}, discarding", resourceLocation, pos);
++                LOGGER.debug("Found reference to unknown structure '{}' in chunk {}, discarding", resourceLocation, pos);
+             } else {
+                 Optional<long[]> longArray = tag1.asLongArray();
+                 if (!longArray.isEmpty()) {
