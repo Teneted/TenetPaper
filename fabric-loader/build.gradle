@@ -151,7 +151,7 @@ java {
 jar {
 	enabled = false
 	// Set the classifier to fix gradle task validation confusion.
-	archiveClassifier = "fat"
+	archiveClassifier = "disabled"
 }
 
 test {
