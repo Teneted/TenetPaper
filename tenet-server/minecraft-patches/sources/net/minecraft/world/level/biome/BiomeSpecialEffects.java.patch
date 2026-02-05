@@ -1,0 +1,36 @@
+--- a/net/minecraft/world/level/biome/BiomeSpecialEffects.java
++++ b/net/minecraft/world/level/biome/BiomeSpecialEffects.java
+@@ -33,20 +_,20 @@
+             )
+             .apply(instance, BiomeSpecialEffects::new)
+     );
+-    private final int fogColor;
+-    private final int waterColor;
+-    private final int waterFogColor;
+-    private final int skyColor;
+-    private final Optional<Integer> foliageColorOverride;
++    public int fogColor;
++    public int waterColor;
++    public int waterFogColor;
++    public int skyColor;
++    public Optional<Integer> foliageColorOverride;
+     private final Optional<Integer> dryFoliageColorOverride;
+-    private final Optional<Integer> grassColorOverride;
+-    private final BiomeSpecialEffects.GrassColorModifier grassColorModifier;
+-    private final Optional<AmbientParticleSettings> ambientParticleSettings;
+-    private final Optional<Holder<SoundEvent>> ambientLoopSoundEvent;
+-    private final Optional<AmbientMoodSettings> ambientMoodSettings;
+-    private final Optional<AmbientAdditionsSettings> ambientAdditionsSettings;
+-    private final Optional<WeightedList<Music>> backgroundMusic;
+-    private final float backgroundMusicVolume;
++    public Optional<Integer> grassColorOverride;
++    public BiomeSpecialEffects.GrassColorModifier grassColorModifier;
++    public Optional<AmbientParticleSettings> ambientParticleSettings;
++    public Optional<Holder<SoundEvent>> ambientLoopSoundEvent;
++    public Optional<AmbientMoodSettings> ambientMoodSettings;
++    public Optional<AmbientAdditionsSettings> ambientAdditionsSettings;
++    public Optional<WeightedList<Music>> backgroundMusic;
++    public float backgroundMusicVolume;
+ 
+     BiomeSpecialEffects(
+         int fogColor,

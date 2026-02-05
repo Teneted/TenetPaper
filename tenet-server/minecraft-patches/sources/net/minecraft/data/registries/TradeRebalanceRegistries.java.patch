@@ -1,0 +1,11 @@
+--- a/net/minecraft/data/registries/TradeRebalanceRegistries.java
++++ b/net/minecraft/data/registries/TradeRebalanceRegistries.java
+@@ -7,7 +_,7 @@
+ import net.minecraft.world.item.enchantment.providers.TradeRebalanceEnchantmentProviders;
+ 
+ public class TradeRebalanceRegistries {
+-    public static final RegistrySetBuilder BUILDER = new RegistrySetBuilder()
++    private static final RegistrySetBuilder BUILDER = new RegistrySetBuilder()
+         .add(Registries.ENCHANTMENT_PROVIDER, TradeRebalanceEnchantmentProviders::bootstrap);
+ 
+     public static CompletableFuture<RegistrySetBuilder.PatchedRegistries> createLookup(CompletableFuture<HolderLookup.Provider> provider) {

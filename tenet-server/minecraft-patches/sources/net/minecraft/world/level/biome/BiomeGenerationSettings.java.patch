@@ -1,0 +1,17 @@
+--- a/net/minecraft/world/level/biome/BiomeGenerationSettings.java
++++ b/net/minecraft/world/level/biome/BiomeGenerationSettings.java
+@@ -39,10 +_,10 @@
+             )
+             .apply(instance, BiomeGenerationSettings::new)
+     );
+-    private final HolderSet<ConfiguredWorldCarver<?>> carvers;
+-    private final List<HolderSet<PlacedFeature>> features;
+-    private final Supplier<List<ConfiguredFeature<?, ?>>> flowerFeatures;
+-    private final Supplier<Set<PlacedFeature>> featureSet;
++    public HolderSet<ConfiguredWorldCarver<?>> carvers;
++    public List<HolderSet<PlacedFeature>> features;
++    public Supplier<List<ConfiguredFeature<?, ?>>> flowerFeatures;
++    public Supplier<Set<PlacedFeature>> featureSet;
+ 
+     BiomeGenerationSettings(HolderSet<ConfiguredWorldCarver<?>> carvers, List<HolderSet<PlacedFeature>> features) {
+         this.carvers = carvers;

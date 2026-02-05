@@ -1,0 +1,117 @@
+--- a/net/minecraft/world/level/biome/TheEndBiomeSource.java
++++ b/net/minecraft/world/level/biome/TheEndBiomeSource.java
+@@ -1,40 +_,48 @@
+ package net.minecraft.world.level.biome;
+ 
++import com.google.common.base.Suppliers;
+ import com.mojang.serialization.MapCodec;
+ import com.mojang.serialization.codecs.RecordCodecBuilder;
++
++import java.util.Collections;
++import java.util.LinkedHashSet;
++import java.util.Set;
++import java.util.function.Supplier;
+ import java.util.stream.Stream;
++
++import net.fabricmc.fabric.impl.biome.TheEndBiomeData;
+ import net.minecraft.core.Holder;
+ import net.minecraft.core.HolderGetter;
+ import net.minecraft.core.QuartPos;
+ import net.minecraft.core.SectionPos;
++import net.minecraft.core.registries.Registries;
+ import net.minecraft.resources.RegistryOps;
+ import net.minecraft.world.level.levelgen.DensityFunction;
+ 
+ public class TheEndBiomeSource extends BiomeSource {
+-    public static final MapCodec<TheEndBiomeSource> CODEC = RecordCodecBuilder.mapCodec(
+-        instance -> instance.group(
+-                RegistryOps.retrieveElement(Biomes.THE_END),
+-                RegistryOps.retrieveElement(Biomes.END_HIGHLANDS),
+-                RegistryOps.retrieveElement(Biomes.END_MIDLANDS),
+-                RegistryOps.retrieveElement(Biomes.SMALL_END_ISLANDS),
+-                RegistryOps.retrieveElement(Biomes.END_BARRENS)
+-            )
+-            .apply(instance, instance.stable(TheEndBiomeSource::new))
+-    );
++    public static final MapCodec<TheEndBiomeSource> CODEC = RecordCodecBuilder.mapCodec((instance) -> {
++        return instance.group(RegistryOps.retrieveGetter(Registries.BIOME)).apply(instance, instance.stable(TheEndBiomeSource::create));
++    });
+     private final Holder<Biome> end;
+     private final Holder<Biome> highlands;
+     private final Holder<Biome> midlands;
+     private final Holder<Biome> islands;
+     private final Holder<Biome> barrens;
++    private Supplier<TheEndBiomeData.Overrides> overrides;
++    private boolean biomeSetModified = false;
++    private boolean hasCheckedForModifiedSet = false;
+ 
+     public static TheEndBiomeSource create(HolderGetter<Biome> biomeGetter) {
+-        return new TheEndBiomeSource(
++        TheEndBiomeData.biomeRegistry.set(biomeGetter);
++        TheEndBiomeSource endBiomeSource = new TheEndBiomeSource(
+             biomeGetter.getOrThrow(Biomes.THE_END),
+             biomeGetter.getOrThrow(Biomes.END_HIGHLANDS),
+             biomeGetter.getOrThrow(Biomes.END_MIDLANDS),
+             biomeGetter.getOrThrow(Biomes.SMALL_END_ISLANDS),
+             biomeGetter.getOrThrow(Biomes.END_BARRENS)
+         );
++        TheEndBiomeData.biomeRegistry.remove();
++        return endBiomeSource;
+     }
+ 
+     private TheEndBiomeSource(Holder<Biome> end, Holder<Biome> highlands, Holder<Biome> midlands, Holder<Biome> islands, Holder<Biome> barrens) {
+@@ -43,6 +_,15 @@
+         this.midlands = midlands;
+         this.islands = islands;
+         this.barrens = barrens;
++        HolderGetter<Biome> biomes = TheEndBiomeData.biomeRegistry.get();
++
++        if (biomes == null) {
++            throw new IllegalStateException("Biome registry not set by Mixin");
++        }
++
++        overrides = Suppliers.memoize(() -> {
++            return TheEndBiomeData.createOverrides(biomes);
++        });
+     }
+ 
+     @Override
+@@ -63,18 +_,34 @@
+         int sectionPosX = SectionPos.blockToSectionCoord(blockPosX);
+         int sectionPosZ = SectionPos.blockToSectionCoord(blockPosZ);
+         if ((long)sectionPosX * sectionPosX + (long)sectionPosZ * sectionPosZ <= 4096L) {
+-            return this.end;
++            return overrides.get().pick(x, y, z, sampler, this.end);
+         } else {
+             int i = (SectionPos.blockToSectionCoord(blockPosX) * 2 + 1) * 8;
+             int i1 = (SectionPos.blockToSectionCoord(blockPosZ) * 2 + 1) * 8;
+             double d = sampler.erosion().compute(new DensityFunction.SinglePointContext(i, blockPosY, i1));
+             if (d > 0.25) {
+-                return this.highlands;
++                return overrides.get().pick(x, y, z, sampler, this.highlands);
+             } else if (d >= -0.0625) {
+-                return this.midlands;
++                return overrides.get().pick(x, y, z, sampler, this.midlands);
+             } else {
+-                return d < -0.21875 ? this.islands : this.barrens;
++                return overrides.get().pick(x, y, z, sampler, d < -0.21875 ? this.islands : this.barrens);
+             }
+         }
++    }
++
++    @Override
++    protected Set<Holder<Biome>> modifyBiomeSet(Set<Holder<Biome>> biomes) {
++        if (!hasCheckedForModifiedSet) {
++            hasCheckedForModifiedSet = true;
++            biomeSetModified = !overrides.get().customBiomes.isEmpty();
++        }
++
++        if (biomeSetModified) {
++            var modifiedBiomes = new LinkedHashSet<>(biomes);
++            modifiedBiomes.addAll(overrides.get().customBiomes);
++            return Collections.unmodifiableSet(modifiedBiomes);
++        }
++
++        return biomes;
+     }
+ }

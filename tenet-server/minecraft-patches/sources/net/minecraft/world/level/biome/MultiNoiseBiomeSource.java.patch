@@ -1,0 +1,38 @@
+--- a/net/minecraft/world/level/biome/MultiNoiseBiomeSource.java
++++ b/net/minecraft/world/level/biome/MultiNoiseBiomeSource.java
+@@ -8,6 +_,8 @@
+ import java.util.List;
+ import java.util.Optional;
+ import java.util.stream.Stream;
++
++import net.fabricmc.fabric.impl.biome.BiomeSourceAccess;
+ import net.minecraft.core.BlockPos;
+ import net.minecraft.core.Holder;
+ import net.minecraft.core.QuartPos;
+@@ -15,7 +_,7 @@
+ import net.minecraft.util.VisibleForDebug;
+ import net.minecraft.world.level.levelgen.NoiseRouterData;
+ 
+-public class MultiNoiseBiomeSource extends BiomeSource {
++public class MultiNoiseBiomeSource extends BiomeSource implements BiomeSourceAccess {
+     private static final MapCodec<Holder<Biome>> ENTRY_CODEC = Biome.CODEC.fieldOf("biome");
+     public static final MapCodec<Climate.ParameterList<Holder<Biome>>> DIRECT_CODEC = Climate.ParameterList.codec(ENTRY_CODEC).fieldOf("biomes");
+     private static final MapCodec<Holder<MultiNoiseBiomeSourceParameterList>> PRESET_CODEC = MultiNoiseBiomeSourceParameterList.CODEC
+@@ -91,5 +_,17 @@
+                 + " H: "
+                 + overworldBiomeBuilder.getDebugStringForHumidity(f3)
+         );
++    }
++
++    private boolean modifyBiomeEntries = true;
++
++    @Override
++    public boolean fabric_shouldModifyBiomeEntries() {
++        return this.modifyBiomeEntries;
++    }
++
++    @Override
++    public void fabric_setModifyBiomeEntries(boolean modifyBiomeEntries) {
++        this.modifyBiomeEntries = modifyBiomeEntries;
+     }
+ }

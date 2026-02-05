@@ -1,0 +1,15 @@
+--- a/net/minecraft/world/level/biome/MobSpawnSettings.java
++++ b/net/minecraft/world/level/biome/MobSpawnSettings.java
+@@ -42,9 +_,9 @@
+             )
+             .apply(instance, MobSpawnSettings::new)
+     );
+-    private final float creatureGenerationProbability;
+-    private final Map<MobCategory, WeightedList<MobSpawnSettings.SpawnerData>> spawners;
+-    private final Map<EntityType<?>, MobSpawnSettings.MobSpawnCost> mobSpawnCosts;
++    public float creatureGenerationProbability;
++    public Map<MobCategory, WeightedList<MobSpawnSettings.SpawnerData>> spawners;
++    public Map<EntityType<?>, MobSpawnSettings.MobSpawnCost> mobSpawnCosts;
+ 
+     MobSpawnSettings(
+         float creatureGenerationProbability,

@@ -1,0 +1,19 @@
+--- a/net/minecraft/world/level/levelgen/RandomState.java
++++ b/net/minecraft/world/level/levelgen/RandomState.java
+@@ -3,6 +_,8 @@
+ import java.util.HashMap;
+ import java.util.Map;
+ import java.util.concurrent.ConcurrentHashMap;
++
++import net.fabricmc.fabric.impl.biome.MultiNoiseSamplerHooks;
+ import net.minecraft.core.Holder;
+ import net.minecraft.core.HolderGetter;
+ import net.minecraft.core.registries.Registries;
+@@ -122,6 +_,7 @@
+             this.router.ridges().mapAll(visitor),
+             settings.spawnTarget()
+         );
++        ((MultiNoiseSamplerHooks) (Object) sampler).fabric_setSeed(levelSeed);
+     }
+ 
+     public NormalNoise getOrCreateNoise(ResourceKey<NormalNoise.NoiseParameters> resourceKey) {

@@ -1,0 +1,41 @@
+--- a/net/minecraft/world/level/levelgen/NoiseChunk.java
++++ b/net/minecraft/world/level/levelgen/NoiseChunk.java
+@@ -9,6 +_,8 @@
+ import java.util.List;
+ import java.util.Map;
+ import javax.annotation.Nullable;
++
++import net.fabricmc.fabric.impl.biome.MultiNoiseSamplerHooks;
+ import net.minecraft.core.QuartPos;
+ import net.minecraft.core.SectionPos;
+ import net.minecraft.server.level.ColumnPos;
+@@ -57,6 +_,7 @@
+     long interpolationCounter;
+     long arrayInterpolationCounter;
+     int arrayIndex;
++    private long seed;
+     private final DensityFunction.ContextProvider sliceFillingContextProvider = new DensityFunction.ContextProvider() {
+         @Override
+         public DensityFunction.FunctionContext forIndex(int arrayIndex) {
+@@ -163,10 +_,11 @@
+         }
+ 
+         this.blockStateRule = new MaterialRuleList(list.toArray(new NoiseChunk.BlockStateFiller[0]));
++        seed = ((MultiNoiseSamplerHooks) (Object) random.sampler()).fabric_getSeed();// Fabric
+     }
+ 
+     protected Climate.Sampler cachedClimateSampler(NoiseRouter noiseRouter, List<Climate.ParameterPoint> points) {
+-        return new Climate.Sampler(
++        Climate.Sampler sampler = new Climate.Sampler(
+             noiseRouter.temperature().mapAll(this::wrap),
+             noiseRouter.vegetation().mapAll(this::wrap),
+             noiseRouter.continents().mapAll(this::wrap),
+@@ -175,6 +_,8 @@
+             noiseRouter.ridges().mapAll(this::wrap),
+             points
+         );
++        sampler.fabric_setSeed(seed);
++        return sampler;
+     }
+ 
+     @Nullable

@@ -1,0 +1,22 @@
+--- a/net/minecraft/server/MinecraftServer.java
++++ b/net/minecraft/server/MinecraftServer.java
+@@ -48,6 +_,8 @@
+ import java.util.stream.Collectors;
+ import javax.annotation.Nullable;
+ import javax.imageio.ImageIO;
++
++import net.fabricmc.fabric.impl.biome.modification.BiomeModificationImpl;
+ import net.minecraft.CrashReport;
+ import net.minecraft.CrashReportCategory;
+ import net.minecraft.FileUtil;
+@@ -559,7 +_,10 @@
+         Runtime.getRuntime().addShutdownHook(new org.bukkit.craftbukkit.util.ServerShutdownThread(this));
+         // CraftBukkit end
+         this.paperConfigurations = services.paper().configurations(); // Paper - add paper configuration files
++        BiomeModificationImpl.INSTANCE.finalizeWorldGen(getRegistryManager());// Fabric
+     }
++
++    public abstract RegistryAccess.Frozen getRegistryManager();// Fabric
+ 
+     private void readScoreboard(DimensionDataStorage dataStorage) {
+         dataStorage.computeIfAbsent(ServerScoreboard.TYPE);

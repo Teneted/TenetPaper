@@ -1,0 +1,20 @@
+--- a/net/minecraft/world/level/biome/BiomeSource.java
++++ b/net/minecraft/world/level/biome/BiomeSource.java
+@@ -33,12 +_,16 @@
+     protected BiomeSource() {
+     }
+ 
++    protected Set<Holder<Biome>> modifyBiomeSet(Set<Holder<Biome>> biomes) {
++        return biomes;
++    }
++
+     protected abstract MapCodec<? extends BiomeSource> codec();
+ 
+     protected abstract Stream<Holder<Biome>> collectPossibleBiomes();
+ 
+     public Set<Holder<Biome>> possibleBiomes() {
+-        return this.possibleBiomes.get();
++        return modifyBiomeSet(this.possibleBiomes.get());// Fabric
+     }
+ 
+     public Set<Holder<Biome>> getBiomesWithin(int x, int y, int z, int radius, Climate.Sampler sampler) {
