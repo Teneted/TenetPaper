@@ -1,0 +1,80 @@
+--- a/paper-server/build.gradle.kts
++++ b/paper-server/build.gradle.kts
+@@ -15,7 +_,7 @@
+ 
+ dependencies {
+     mache("io.papermc:mache:1.21.10+build.9")
+-    paperclip("io.papermc:paperclip:3.0.3")
++    paperclip(project(":paperclip"))
+     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+ }
+ 
+@@ -23,6 +_,16 @@
+     minecraftVersion = providers.gradleProperty("mcVersion")
+     gitFilePatches = false
+ 
++    val tenet = forks.register("tenet") {
++        upstream.patchDir("paperServer") {
++            excludes = setOf("src/minecraft", "patches", "build.gradle.kts")
++            patchesDir = rootDirectory.dir("tenet-server/paper-patches")
++            outputDir = rootDirectory.dir("paper-server")
++        }
++    }
++
++    activeFork = tenet
++
+     spigot {
+         enabled = true
+         buildDataRef = "42d18d4c4653ffc549778dbe223f6994a031d69e"
+@@ -104,7 +_,21 @@
+     }
+ }
+ 
+-val log4jPlugins = sourceSets.create("log4jPlugins")
++sourceSets {
++    main {
++        java { srcDir("../paper-server/src/main/java") }
++        resources { srcDir("../paper-server/src/main/resources") }
++    }
++    test {
++        java { srcDir("../paper-server/src/test/java") }
++        resources { srcDir("../paper-server/src/test/resources") }
++    }
++}
++
++val log4jPlugins = sourceSets.create("log4jPlugins").java{
++    srcDir("../paper-server/src/log4jPlugins/java")
++}
++
+ configurations.named(log4jPlugins.compileClasspathConfigurationName) {
+     extendsFrom(configurations.compileClasspath.get())
+ }
+@@ -127,7 +_,7 @@
+ }
+ 
+ dependencies {
+-    implementation(project(":paper-api"))
++    implementation(project(":tenet-api"))
+     implementation("ca.spottedleaf:concurrentutil:0.0.7")
+     implementation("org.jline:jline-terminal-ffm:3.27.1") // use ffm on java 22+
+     implementation("org.jline:jline-terminal-jni:3.27.1") // fall back to jni on java 21
+@@ -197,14 +_,14 @@
+         val gitBranch = git.exec(providers, "rev-parse", "--abbrev-ref", "HEAD").get().trim()
+         attributes(
+             "Main-Class" to "org.bukkit.craftbukkit.Main",
+-            "Implementation-Title" to "Paper",
++            "Implementation-Title" to "Tenet",
+             "Implementation-Version" to implementationVersion,
+             "Implementation-Vendor" to date,
+-            "Specification-Title" to "Paper",
++            "Specification-Title" to "Tenet",
+             "Specification-Version" to project.version,
+-            "Specification-Vendor" to "Paper Team",
+-            "Brand-Id" to "papermc:paper",
+-            "Brand-Name" to "Paper",
++            "Specification-Vendor" to "Teneted Team",
++            "Brand-Id" to "teneted:tenet",
++            "Brand-Name" to "Teneted",
+             "Build-Number" to (build ?: ""),
+             "Build-Time" to buildTime.toString(),
+             "Git-Branch" to gitBranch,
