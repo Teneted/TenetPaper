@@ -1,0 +1,13 @@
+--- a/net/minecraft/commands/arguments/selector/options/EntitySelectorOptions.java
++++ b/net/minecraft/commands/arguments/selector/options/EntitySelectorOptions.java
+@@ -83,6 +_,10 @@
+         OPTIONS.put(id, new EntitySelectorOptions.Option(handler, predicate, tooltip));
+     }
+ 
++    public static void callPutOption(String id, EntitySelectorOptions.Modifier modifier, Predicate<EntitySelectorParser> condition, Component description) {
++        register(id, modifier, condition, description);
++    }
++
+     public static void bootStrap() {
+         if (OPTIONS.isEmpty()) {
+             register("name", parser -> {

@@ -1,0 +1,21 @@
+--- a/net/minecraft/commands/synchronization/ArgumentTypeInfos.java
++++ b/net/minecraft/commands/synchronization/ArgumentTypeInfos.java
+@@ -65,13 +_,17 @@
+ import net.minecraft.core.Registry;
+ 
+ public class ArgumentTypeInfos {
+-    private static final Map<Class<?>, ArgumentTypeInfo<?, ?>> BY_CLASS = Maps.newHashMap();
++    private static Map<Class<?>, ArgumentTypeInfo<?, ?>> BY_CLASS = Maps.newHashMap();
+ 
+     private static <A extends ArgumentType<?>, T extends ArgumentTypeInfo.Template<A>> ArgumentTypeInfo<A, T> register(
+         Registry<ArgumentTypeInfo<?, ?>> registry, String id, Class<? extends A> argumentClass, ArgumentTypeInfo<A, T> info
+     ) {
+         BY_CLASS.put(argumentClass, info);
+         return Registry.register(registry, id, info);
++    }
++
++    public static Map<Class<?>, ArgumentTypeInfo<?, ?>> fabric_getClassMap() {
++        return BY_CLASS;
+     }
+ 
+     public static ArgumentTypeInfo<?, ?> bootstrap(Registry<ArgumentTypeInfo<?, ?>> registry) {

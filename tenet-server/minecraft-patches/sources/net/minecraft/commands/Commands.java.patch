@@ -1,0 +1,19 @@
+--- a/net/minecraft/commands/Commands.java
++++ b/net/minecraft/commands/Commands.java
+@@ -25,6 +_,8 @@
+ import java.util.stream.Collectors;
+ import java.util.stream.Stream;
+ import javax.annotation.Nullable;
++
++import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+ import net.minecraft.ChatFormatting;
+ import net.minecraft.SharedConstants;
+ import net.minecraft.Util;
+@@ -329,6 +_,7 @@
+                     .redirect(flattenedAliasTarget));
+         }
+         // Paper end - Brigadier Command API
++        CommandRegistrationCallback.EVENT.invoker().register(this.dispatcher, context, selection);
+         this.dispatcher.setConsumer(ExecutionCommandSource.resultConsumer());
+     }
+ 
