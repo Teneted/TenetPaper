@@ -14,8 +14,8 @@ plugins {
 
 rootProject.name = "TenetPaper"
 
-include("fork-api")
-include("fork-server")
+include("tenet-api")
+include("tenet-server")
 include("fabric-loader")
 include("paperclip")
 include("paperclip:java17")
