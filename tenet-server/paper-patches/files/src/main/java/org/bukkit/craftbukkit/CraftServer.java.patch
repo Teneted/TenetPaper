@@ -1,0 +1,19 @@
+--- a/src/main/java/org/bukkit/craftbukkit/CraftServer.java
++++ b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+@@ -44,6 +_,8 @@
+ import java.util.logging.Logger;
+ import java.util.stream.Collectors;
+ import javax.imageio.ImageIO;
++
++import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLevelEvents;
+ import net.minecraft.Optionull;
+ import net.minecraft.advancements.AdvancementHolder;
+ import net.minecraft.commands.CommandSourceStack;
+@@ -1346,6 +_,7 @@
+         if (!event.callEvent()) {
+             return false;
+         }
++        ServerLevelEvents.UNLOAD.invoker().onLevelUnload(console, handle);
+ 
+         try {
+             if (save) {

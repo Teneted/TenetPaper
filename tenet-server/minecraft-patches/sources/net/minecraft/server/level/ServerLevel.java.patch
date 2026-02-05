@@ -1,0 +1,41 @@
+--- a/net/minecraft/server/level/ServerLevel.java
++++ b/net/minecraft/server/level/ServerLevel.java
+@@ -34,6 +_,9 @@
+ import java.util.stream.Stream;
+ import javax.annotation.Nonnull;
+ import javax.annotation.Nullable;
++
++import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
++import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+ import net.minecraft.CrashReport;
+ import net.minecraft.CrashReportCategory;
+ import net.minecraft.ReportType;
+@@ -733,6 +_,7 @@
+ 
+     public void tick(BooleanSupplier hasTimeLeft) {
+         ProfilerFiller profilerFiller = Profiler.get();
++        ServerTickEvents.START_LEVEL_TICK.invoker().onStartTick(this);
+         this.handlingTick = true;
+         TickRateManager tickRateManager = this.tickRateManager();
+         boolean runsNormally = tickRateManager.runsNormally();
+@@ -861,6 +_,7 @@
+ 
+         this.debugSynchronizers.tick(this.server.debugSubscribers());
+         profilerFiller.pop();
++        ServerTickEvents.END_LEVEL_TICK.invoker().onEndTick(this);
+     }
+ 
+     @Override
+@@ -2774,10 +_,12 @@
+             }
+             // Paper end - Entity origin API
+             new com.destroystokyo.paper.event.entity.EntityAddToWorldEvent(entity.getBukkitEntity(), ServerLevel.this.getWorld()).callEvent(); // Paper - fire while valid
++            ServerEntityEvents.ENTITY_LOAD.invoker().onLoad(entity, ServerLevel.this);
+         }
+ 
+         @Override
+         public void onTrackingEnd(Entity entity) {
++            ServerEntityEvents.ENTITY_UNLOAD.invoker().onUnload(entity, ServerLevel.this);
+             org.spigotmc.AsyncCatcher.catchOp("entity unregister"); // Spigot
+             // Spigot start // TODO I don't think this is needed anymore
+             if (entity instanceof Player player) {

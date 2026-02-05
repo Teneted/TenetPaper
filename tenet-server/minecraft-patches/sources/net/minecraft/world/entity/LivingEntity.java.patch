@@ -1,11 +1,12 @@
 --- a/net/minecraft/world/entity/LivingEntity.java
 +++ b/net/minecraft/world/entity/LivingEntity.java
-@@ -30,6 +_,8 @@
+@@ -30,6 +_,9 @@
  import java.util.function.Predicate;
  import javax.annotation.Nonnull;
  import javax.annotation.Nullable;
 +
 +import net.fabricmc.fabric.api.block.v1.BlockFunctionalityTags;
++import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
  import net.minecraft.BlockUtil;
  import net.minecraft.Util;
  import net.minecraft.advancements.CriteriaTriggers;
@@ -28,3 +29,12 @@
              return blockState.is(Blocks.LADDER) && blockState.getValue(LadderBlock.FACING) == state.getValue(TrapDoorBlock.FACING);
          }
      }
+@@ -3399,7 +_,7 @@
+                     map = Maps.newEnumMap(EquipmentSlot.class);
+                     equipmentChanges = Maps.newEnumMap(org.bukkit.inventory.EquipmentSlot.class); // Paper - EntityEquipmentChangedEvent
+                 }
+-
++                ServerEntityEvents.EQUIPMENT_CHANGE.invoker().onChange(this, equipmentSlot, itemStack, itemBySlot);
+                 map.put(equipmentSlot, itemBySlot);
+                 equipmentChanges.put(org.bukkit.craftbukkit.CraftEquipmentSlot.getSlot(equipmentSlot), new EquipmentChangeImpl(oldItem, newItem)); // Paper - EntityEquipmentChangedEvent
+                 AttributeMap attributes = this.getAttributes();

@@ -1,0 +1,52 @@
+--- a/net/minecraft/world/level/Level.java
++++ b/net/minecraft/world/level/Level.java
+@@ -4,13 +_,17 @@
+ import com.mojang.serialization.Codec;
+ import java.io.IOException;
+ import java.util.Collection;
++import java.util.HashSet;
+ import java.util.Iterator;
+ import java.util.List;
++import java.util.Set;
+ import java.util.UUID;
+ import java.util.function.Consumer;
+ import java.util.function.Predicate;
+ import java.util.stream.Collectors;
+ import javax.annotation.Nullable;
++
++import net.fabricmc.fabric.impl.event.lifecycle.LoadedChunksCache;
+ import net.minecraft.CrashReport;
+ import net.minecraft.CrashReportCategory;
+ import net.minecraft.ReportedException;
+@@ -96,7 +_,7 @@
+ import org.bukkit.entity.SpawnCategory;
+ // CraftBukkit end
+ 
+-public abstract class Level implements LevelAccessor, AutoCloseable, ca.spottedleaf.moonrise.patches.chunk_system.level.ChunkSystemLevel, ca.spottedleaf.moonrise.patches.chunk_system.world.ChunkSystemEntityGetter { // Paper - rewrite chunk system // Paper - optimise collisions
++public abstract class Level implements LevelAccessor, AutoCloseable, ca.spottedleaf.moonrise.patches.chunk_system.level.ChunkSystemLevel, ca.spottedleaf.moonrise.patches.chunk_system.world.ChunkSystemEntityGetter, LoadedChunksCache { // Paper - rewrite chunk system // Paper - optimise collisions
+     public static final Codec<ResourceKey<Level>> RESOURCE_KEY_CODEC = ResourceKey.codec(Registries.DIMENSION);
+     public static final ResourceKey<Level> OVERWORLD = ResourceKey.create(Registries.DIMENSION, ResourceLocation.withDefaultNamespace("overworld"));
+     public static final ResourceKey<Level> NETHER = ResourceKey.create(Registries.DIMENSION, ResourceLocation.withDefaultNamespace("the_nether"));
+@@ -170,6 +_,22 @@
+     private int tileTickPosition;
+     public final Map<ServerExplosion.CacheKey, Float> explosionDensityCache = new java.util.HashMap<>(); // Paper - Optimize explosions
+     public java.util.ArrayDeque<net.minecraft.world.level.block.RedstoneTorchBlock.Toggle> redstoneUpdateInfos; // Paper - Faster redstone torch rapid clock removal; Move from Map in BlockRedstoneTorch to here
++    private final Set<LevelChunk> loadedChunks = new HashSet<>();
++
++    @Override
++    public Set<LevelChunk> fabric_getLoadedChunks() {
++        return this.loadedChunks;
++    }
++
++    @Override
++    public void fabric_markLoaded(LevelChunk chunk) {
++        this.loadedChunks.add(chunk);
++    }
++
++    @Override
++    public void fabric_markUnloaded(LevelChunk chunk) {
++        this.loadedChunks.remove(chunk);
++    }
+ 
+     public CraftWorld getWorld() {
+         return this.world;

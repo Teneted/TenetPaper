@@ -1,0 +1,40 @@
+--- a/net/minecraft/server/ReloadableServerResources.java
++++ b/net/minecraft/server/ReloadableServerResources.java
+@@ -4,11 +_,14 @@
+ import java.util.List;
+ import java.util.concurrent.CompletableFuture;
+ import java.util.concurrent.Executor;
++
++import net.fabricmc.fabric.api.event.lifecycle.v1.CommonLifecycleEvents;
+ import net.minecraft.commands.CommandBuildContext;
+ import net.minecraft.commands.Commands;
+ import net.minecraft.core.HolderLookup;
+ import net.minecraft.core.LayeredRegistryAccess;
+ import net.minecraft.core.Registry;
++import net.minecraft.core.RegistryAccess;
+ import net.minecraft.server.packs.resources.PreparableReloadListener;
+ import net.minecraft.server.packs.resources.ResourceManager;
+ import net.minecraft.server.packs.resources.SimpleReloadInstance;
+@@ -26,6 +_,7 @@
+     private final ServerAdvancementManager advancements;
+     private final ServerFunctionLibrary functionLibrary;
+     private final List<Registry.PendingTags<?>> postponedTags;
++    private RegistryAccess layeredRegistries;
+ 
+     private ReloadableServerResources(
+         LayeredRegistryAccess<RegistryLayer> registryAccess,
+@@ -43,6 +_,7 @@
+         io.papermc.paper.command.PaperCommands.registerCommands(); // Paper
+         this.advancements = new ServerAdvancementManager(registries);
+         this.functionLibrary = new ServerFunctionLibrary(functionCompilationLevel, this.commands.getDispatcher());
++        this.layeredRegistries = registryAccess.compositeAccess();
+     }
+ 
+     public ServerFunctionLibrary getFunctionLibrary() {
+@@ -109,5 +_,6 @@
+ 
+     public void updateStaticRegistryTags() {
+         this.postponedTags.forEach(Registry.PendingTags::apply);
++        CommonLifecycleEvents.TAGS_LOADED.invoker().onTagsLoaded(layeredRegistries, false);
+     }
+ }
