@@ -1,0 +1,73 @@
+--- a/src/main/java/org/bukkit/Material.java
++++ b/src/main/java/org/bukkit/Material.java
+@@ -2730,18 +_,28 @@
+ 
+     private final int id;
+     private final Constructor<? extends MaterialData> ctor;
+-    private static final Map<String, Material> BY_NAME = Maps.newHashMap();
++    public static final Map<String, Material> BY_NAME = Maps.newHashMap();
+     private final int maxStack;
+     public final Class<?> data;
+     private final boolean legacy;
+-    private final NamespacedKey key;
++    public NamespacedKey key;
+     private final Supplier<ItemType> itemType;
+     private final Supplier<BlockType> blockType;
++    public boolean isModBlock = false;
++    public boolean isModItem = false;
+ 
+     private Material(final int id) {
+         this(id, 64);
+     }
+ 
++    // PaperModLoader start - constructor used to set if the Material is a block or not
++    private Material(final int id, final int stack, boolean isModBlock, boolean isModItem) {
++        this(id, stack);
++        this.isModBlock = isModBlock;
++        this.isModItem = isModItem;
++    }
++    // PaperModLoader end
++
+     private Material(final int id, final int stack) {
+         this(id, stack, MaterialData.class);
+     }
+@@ -2980,6 +_,9 @@
+      * @return true if this material is a block
+      */
+     public boolean isBlock() {
++        if (isModBlock) {
++            return true;
++        }
+         return asBlockType() != null;
+     }
+ 
+@@ -3263,8 +_,8 @@
+             case YELLOW_CARPET:
+             case ZOMBIE_HEAD:
+             case ZOMBIE_WALL_HEAD:
+-            // End generate - Material#isTransparent
+-            // ----- Legacy Separator -----
++                // End generate - Material#isTransparent
++                // ----- Legacy Separator -----
+             case LEGACY_AIR:
+             case LEGACY_SAPLING:
+             case LEGACY_POWERED_RAIL:
+@@ -3315,7 +_,7 @@
+             case LEGACY_BEETROOT_BLOCK:
+             case LEGACY_END_GATEWAY:
+             case LEGACY_STRUCTURE_VOID:
+-            //</editor-fold>
++                //</editor-fold>
+                 return true;
+             default:
+                 return false;
+@@ -3389,6 +_,9 @@
+      * @return true if this material is an item
+      */
+     public boolean isItem() {
++        if (isModItem && !isModBlock) {
++            return true;
++        }
+         return asItemType() != null;
+     }
+ 

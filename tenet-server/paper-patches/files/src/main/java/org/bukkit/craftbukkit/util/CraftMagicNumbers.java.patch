@@ -1,0 +1,154 @@
+--- a/src/main/java/org/bukkit/craftbukkit/util/CraftMagicNumbers.java
++++ b/src/main/java/org/bukkit/craftbukkit/util/CraftMagicNumbers.java
+@@ -158,10 +_,10 @@
+     }
+ 
+     // ========================================================================
+-    private static final Map<Block, Material> BLOCK_MATERIAL = new HashMap<>();
+-    private static final Map<Item, Material> ITEM_MATERIAL = new HashMap<>();
+-    private static final Map<Material, Item> MATERIAL_ITEM = new HashMap<>();
+-    private static final Map<Material, Block> MATERIAL_BLOCK = new HashMap<>();
++    public static Map<Block, Material> BLOCK_MATERIAL = new HashMap<>();
++    public static Map<Item, Material> ITEM_MATERIAL = new HashMap<>();
++    public static Map<Material, Item> MATERIAL_ITEM = new HashMap<>();
++    public static Map<Material, Block> MATERIAL_BLOCK = new HashMap<>();
+ 
+     static {
+         for (Block block : BuiltInRegistries.BLOCK) {
+@@ -490,10 +_,10 @@
+         Preconditions.checkArgument(!item.isEmpty(), "Empty itemstack cannot be serialized");
+ 
+         return serializeNbtToBytes(
+-            (CompoundTag) net.minecraft.world.item.ItemStack.CODEC.encodeStart(
+-                MinecraftServer.getServer().registryAccess().createSerializationContext(NbtOps.INSTANCE),
+-                CraftItemStack.unwrap(item)
+-            ).getOrThrow()
++                (CompoundTag) net.minecraft.world.item.ItemStack.CODEC.encodeStart(
++                        MinecraftServer.getServer().registryAccess().createSerializationContext(NbtOps.INSTANCE),
++                        CraftItemStack.unwrap(item)
++                ).getOrThrow()
+         );
+     }
+ 
+@@ -513,7 +_,7 @@
+             return CraftItemStack.asCraftMirror(net.minecraft.world.item.ItemStack.EMPTY);
+         }
+         return CraftItemStack.asCraftMirror(net.minecraft.world.item.ItemStack.CODEC.parse(
+-            CraftRegistry.getMinecraftRegistry().createSerializationContext(NbtOps.INSTANCE), compound
++                CraftRegistry.getMinecraftRegistry().createSerializationContext(NbtOps.INSTANCE), compound
+         ).getOrThrow());
+     }
+ 
+@@ -523,8 +_,8 @@
+             return Map.of("id", "minecraft:air", SharedConstants.DATA_VERSION_TAG, this.getDataVersion(), "schema_version", 1);
+         }
+         final CompoundTag tag = (CompoundTag) net.minecraft.world.item.ItemStack.CODEC.encodeStart(
+-            CraftRegistry.getMinecraftRegistry().createSerializationContext(NbtOps.INSTANCE),
+-            CraftItemStack.asNMSCopy(itemStack)
++                CraftRegistry.getMinecraftRegistry().createSerializationContext(NbtOps.INSTANCE),
++                CraftItemStack.asNMSCopy(itemStack)
+         ).getOrThrow();
+         NbtUtils.addCurrentDataVersion(tag);
+ 
+@@ -596,7 +_,7 @@
+                         });
+                         tag.put("components", componentsTag);
+ 
+-                     } else {
++                    } else {
+                         throw new IllegalStateException("Unexpected version: " + version);
+                     }
+                 }
+@@ -659,32 +_,32 @@
+         (serializePassengers ? nmsEntity.getSelfAndPassengers() : Stream.of(nmsEntity)).forEach(e -> {
+             // Ensure force flag is not needed
+             Preconditions.checkArgument(
+-                (e.getBukkitEntity().isValid() && e.getBukkitEntity().isPersistent()) || forceSerialization,
+-                "Cannot serialize invalid or non-persistent entity %s(%s) without the FORCE flag",
+-                e.getType().toShortString(),
+-                e.getStringUUID()
++                    (e.getBukkitEntity().isValid() && e.getBukkitEntity().isPersistent()) || forceSerialization,
++                    "Cannot serialize invalid or non-persistent entity %s(%s) without the FORCE flag",
++                    e.getType().toShortString(),
++                    e.getStringUUID()
+             );
+ 
+             if (e instanceof Player) {
+                 // Ensure player flag is not needed
+                 Preconditions.checkArgument(
+-                    allowPlayerSerialization,
+-                    "Cannot serialize player(%s) without the PLAYER flag",
+-                    e.getStringUUID()
++                        allowPlayerSerialization,
++                        "Cannot serialize player(%s) without the PLAYER flag",
++                        e.getStringUUID()
+                 );
+             } else {
+                 // Ensure misc flag is not needed
+                 Preconditions.checkArgument(
+-                    nmsEntity.getType().canSerialize() || allowMiscSerialization,
+-                    "Cannot serialize misc non-saveable entity %s(%s) without the MISC flag",
+-                    e.getType().toShortString(),
+-                    e.getStringUUID()
++                        nmsEntity.getType().canSerialize() || allowMiscSerialization,
++                        "Cannot serialize misc non-saveable entity %s(%s) without the MISC flag",
++                        e.getType().toShortString(),
++                        e.getStringUUID()
+                 );
+             }
+         });
+ 
+         try (final ProblemReporter.ScopedCollector problemReporter = new ProblemReporter.ScopedCollector(
+-            () -> "serialiseEntity@" + entity.getUniqueId(), LOGGER
++                () -> "serialiseEntity@" + entity.getUniqueId(), LOGGER
+         )) {
+             final TagValueOutput output = TagValueOutput.createWithContext(problemReporter, nmsEntity.registryAccess());
+             if (serializePassengers) {
+@@ -727,12 +_,12 @@
+ 
+         final net.minecraft.world.entity.Entity nmsEntity;
+         try (final ProblemReporter.ScopedCollector problemReporter = new ProblemReporter.ScopedCollector(
+-            () -> "deserialiseEntity", LOGGER
++                () -> "deserialiseEntity", LOGGER
+         )) {
+             nmsEntity = net.minecraft.world.entity.EntityType.create(
+-                TagValueInput.create(problemReporter, world.registryAccess(), compound),
+-                world,
+-                net.minecraft.world.entity.EntitySpawnReason.LOAD
++                    TagValueInput.create(problemReporter, world.registryAccess(), compound),
++                    world,
++                    net.minecraft.world.entity.EntitySpawnReason.LOAD
+             ).orElseThrow(() -> new IllegalArgumentException("An ID was not found for the data. Did you downgrade?"));
+         }
+ 
+@@ -753,8 +_,8 @@
+         java.io.ByteArrayOutputStream outputStream = new java.io.ByteArrayOutputStream();
+         try {
+             net.minecraft.nbt.NbtIo.writeCompressed(
+-                compound,
+-                outputStream
++                    compound,
++                    outputStream
+             );
+         } catch (IOException ex) {
+             throw new RuntimeException(ex);
+@@ -766,7 +_,7 @@
+         CompoundTag compound;
+         try {
+             compound = net.minecraft.nbt.NbtIo.readCompressed(
+-                new java.io.ByteArrayInputStream(data), net.minecraft.nbt.NbtAccounter.unlimitedHeap()
++                    new java.io.ByteArrayInputStream(data), net.minecraft.nbt.NbtAccounter.unlimitedHeap()
+             );
+         } catch (IOException ex) {
+             throw new RuntimeException(ex);
+@@ -835,8 +_,8 @@
+             flag = flag.asCreative();
+         }
+         final List<net.minecraft.network.chat.Component> lines = CraftItemStack.asNMSCopy(itemStack).getTooltipLines(
+-            net.minecraft.world.item.Item.TooltipContext.of(player == null ? CraftRegistry.getMinecraftRegistry() : ((org.bukkit.craftbukkit.entity.CraftPlayer) player).getHandle().level().registryAccess()),
+-            player == null ? null : ((org.bukkit.craftbukkit.entity.CraftPlayer) player).getHandle(), flag);
++                net.minecraft.world.item.Item.TooltipContext.of(player == null ? CraftRegistry.getMinecraftRegistry() : ((org.bukkit.craftbukkit.entity.CraftPlayer) player).getHandle().level().registryAccess()),
++                player == null ? null : ((org.bukkit.craftbukkit.entity.CraftPlayer) player).getHandle(), flag);
+         return lines.stream().map(io.papermc.paper.adventure.PaperAdventure::asAdventure).toList();
+     }
+     // Paper end

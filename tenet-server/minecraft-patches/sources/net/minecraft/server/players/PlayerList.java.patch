@@ -1,0 +1,26 @@
+--- a/net/minecraft/server/players/PlayerList.java
++++ b/net/minecraft/server/players/PlayerList.java
+@@ -65,6 +_,7 @@
+ import net.minecraft.server.PlayerAdvancements;
+ import net.minecraft.server.RegistryLayer;
+ import net.minecraft.server.ServerScoreboard;
++import net.minecraft.server.dedicated.DedicatedServer;
+ import net.minecraft.server.level.ServerLevel;
+ import net.minecraft.server.level.ServerPlayer;
+ import net.minecraft.server.network.CommonListenerCookie;
+@@ -98,6 +_,7 @@
+ import net.minecraft.world.scores.PlayerTeam;
+ import net.minecraft.world.scores.Team;
+ import org.slf4j.Logger;
++import org.teneted.tenet.init.BukkitRegistry;
+ 
+ public abstract class PlayerList {
+     public static final File USERBANLIST_FILE = new File("banned-players.json");
+@@ -143,6 +_,7 @@
+         this.playerIo = playerIo;
+         this.whitelist = new UserWhiteList(WHITELIST_FILE, notificationService);
+         this.ops = new ServerOpList(OPLIST_FILE, notificationService);
++        BukkitRegistry.registerAll(((DedicatedServer) server));
+         this.bans = new UserBanList(USERBANLIST_FILE, notificationService);
+         this.ipBans = new IpBanList(IPBANLIST_FILE, notificationService);
+     }
