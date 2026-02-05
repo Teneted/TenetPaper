@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.fabricmc.fabric.api.blockgetter.v2;
+package net.fabricmc.fabric.api.blockview.v2;
 
 import org.jspecify.annotations.Nullable;
 
@@ -49,12 +49,12 @@ public interface RenderDataBlockEntity {
 	 * use in a multithreaded environment.
 	 *
 	 * <p>Note: <b>This method should not be called directly</b>; use
-	 * {@link FabricBlockGetter#getBlockEntityRenderData(BlockPos)} instead. Only call this
+	 * {@link FabricBlockView#getBlockEntityRenderData(BlockPos)} instead. Only call this
 	 * method when the result is used to implement
-	 * {@link FabricBlockGetter#getBlockEntityRenderData(BlockPos)}.
+	 * {@link FabricBlockView#getBlockEntityRenderData(BlockPos)}.
 	 *
 	 * @return the render data
-	 * @see FabricBlockGetter#getBlockEntityRenderData(BlockPos)
+	 * @see FabricBlockView#getBlockEntityRenderData(BlockPos)
 	 */
 	@Nullable
 	default Object getRenderData() {

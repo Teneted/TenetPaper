@@ -5,7 +5,7 @@
  import java.util.Set;
  import javax.annotation.Nullable;
 +
-+import net.fabricmc.fabric.api.blockgetter.v2.RenderDataBlockEntity;
++import net.fabricmc.fabric.api.blockview.v2.RenderDataBlockEntity;
  import net.minecraft.CrashReportCategory;
  import net.minecraft.core.BlockPos;
  import net.minecraft.core.HolderLookup;

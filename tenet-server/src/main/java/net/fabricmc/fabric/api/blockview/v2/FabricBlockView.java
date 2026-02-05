@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.fabricmc.fabric.api.blockgetter.v2;
+package net.fabricmc.fabric.api.blockview.v2;
 
 import org.jetbrains.annotations.UnknownNullability;
 import org.jspecify.annotations.Nullable;
@@ -34,7 +34,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
  *
  * <p>Note: This interface is automatically implemented on all {@link BlockGetter} instances via Mixin and interface injection.
  */
-public interface FabricBlockGetter {
+public interface FabricBlockView {
 	/**
 	 * Retrieves block entity render data for a given block position.
 	 *
