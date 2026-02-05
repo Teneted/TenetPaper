@@ -6,9 +6,9 @@ import org.slf4j.LoggerFactory;
 public class TenetMC {
 
     public static final Logger LOGGER =
-            LoggerFactory.getLogger("PaperModLoader");
+            LoggerFactory.getLogger("TenetModLoader");
 
     public static void init() {
-        LOGGER.info("PaperModLoader is loading...");
+        LOGGER.info("TenetModLoader is loading...");
     }
 }
