@@ -287,7 +287,7 @@ tasks.test {
     jvmArgumentProviders.add(provider)
 }
 
-val generatedDir: java.nio.file.Path = layout.projectDirectory.dir("src/generated/java").asFile.toPath()
+val generatedDir: java.nio.file.Path = layout.projectDirectory.dir("../paper-server/src/generated/java").asFile.toPath()
 idea {
     module {
         generatedSourceDirs.add(generatedDir.toFile())
