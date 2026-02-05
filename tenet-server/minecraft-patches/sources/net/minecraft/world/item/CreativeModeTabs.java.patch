@@ -1,0 +1,149 @@
+--- a/net/minecraft/world/item/CreativeModeTabs.java
++++ b/net/minecraft/world/item/CreativeModeTabs.java
+@@ -10,6 +_,8 @@
+ import java.util.stream.IntStream;
+ import java.util.stream.Stream;
+ import javax.annotation.Nullable;
++
++import net.fabricmc.fabric.impl.itemgroup.FabricItemGroupImpl;
+ import net.minecraft.core.Holder;
+ import net.minecraft.core.HolderLookup;
+ import net.minecraft.core.Registry;
+@@ -42,27 +_,28 @@
+ import net.minecraft.world.level.block.state.properties.TestBlockMode;
+ 
+ public class CreativeModeTabs {
+-    private static final ResourceLocation INVENTORY_BACKGROUND = CreativeModeTab.createTextureLocation("inventory");
+-    private static final ResourceLocation SEARCH_BACKGROUND = CreativeModeTab.createTextureLocation("item_search");
+-    private static final ResourceKey<CreativeModeTab> BUILDING_BLOCKS = createKey("building_blocks");
+-    private static final ResourceKey<CreativeModeTab> COLORED_BLOCKS = createKey("colored_blocks");
+-    private static final ResourceKey<CreativeModeTab> NATURAL_BLOCKS = createKey("natural_blocks");
+-    private static final ResourceKey<CreativeModeTab> FUNCTIONAL_BLOCKS = createKey("functional_blocks");
+-    private static final ResourceKey<CreativeModeTab> REDSTONE_BLOCKS = createKey("redstone_blocks");
+-    private static final ResourceKey<CreativeModeTab> HOTBAR = createKey("hotbar");
+-    private static final ResourceKey<CreativeModeTab> SEARCH = createKey("search");
+-    private static final ResourceKey<CreativeModeTab> TOOLS_AND_UTILITIES = createKey("tools_and_utilities");
+-    private static final ResourceKey<CreativeModeTab> COMBAT = createKey("combat");
+-    private static final ResourceKey<CreativeModeTab> FOOD_AND_DRINKS = createKey("food_and_drinks");
+-    private static final ResourceKey<CreativeModeTab> INGREDIENTS = createKey("ingredients");
+-    private static final ResourceKey<CreativeModeTab> SPAWN_EGGS = createKey("spawn_eggs");
+-    private static final ResourceKey<CreativeModeTab> OP_BLOCKS = createKey("op_blocks");
+-    private static final ResourceKey<CreativeModeTab> INVENTORY = createKey("inventory");
+-    private static final Comparator<Holder<PaintingVariant>> PAINTING_COMPARATOR = Comparator.comparing(
++    public static final ResourceLocation INVENTORY_BACKGROUND = CreativeModeTab.createTextureLocation("inventory");
++    public static final ResourceLocation SEARCH_BACKGROUND = CreativeModeTab.createTextureLocation("item_search");
++    public static final ResourceKey<CreativeModeTab> BUILDING_BLOCKS = createKey("building_blocks");
++    public static final ResourceKey<CreativeModeTab> COLORED_BLOCKS = createKey("colored_blocks");
++    public static final ResourceKey<CreativeModeTab> NATURAL_BLOCKS = createKey("natural_blocks");
++    public static final ResourceKey<CreativeModeTab> FUNCTIONAL_BLOCKS = createKey("functional_blocks");
++    public static final ResourceKey<CreativeModeTab> REDSTONE_BLOCKS = createKey("redstone_blocks");
++    public static final ResourceKey<CreativeModeTab> HOTBAR = createKey("hotbar");
++    public static final ResourceKey<CreativeModeTab> SEARCH = createKey("search");
++    public static final ResourceKey<CreativeModeTab> TOOLS_AND_UTILITIES = createKey("tools_and_utilities");
++    public static final ResourceKey<CreativeModeTab> COMBAT = createKey("combat");
++    public static final ResourceKey<CreativeModeTab> FOOD_AND_DRINKS = createKey("food_and_drinks");
++    public static final ResourceKey<CreativeModeTab> INGREDIENTS = createKey("ingredients");
++    public static final ResourceKey<CreativeModeTab> SPAWN_EGGS = createKey("spawn_eggs");
++    public static final ResourceKey<CreativeModeTab> OP_BLOCKS = createKey("op_blocks");
++    public static final ResourceKey<CreativeModeTab> INVENTORY = createKey("inventory");
++    public static final Comparator<Holder<PaintingVariant>> PAINTING_COMPARATOR = Comparator.comparing(
+         Holder::value, Comparator.comparingInt(PaintingVariant::area).thenComparing(PaintingVariant::width)
+     );
+     @Nullable
+     private static CreativeModeTab.ItemDisplayParameters CACHED_PARAMETERS;
++    private static final int TABS_PER_PAGE = FabricItemGroupImpl.TABS_PER_PAGE;
+ 
+     private static ResourceKey<CreativeModeTab> createKey(String name) {
+         return ResourceKey.create(Registries.CREATIVE_MODE_TAB, ResourceLocation.withDefaultNamespace(name));
+@@ -1983,6 +_,7 @@
+     }
+ 
+     public static void validate() {
++        /*
+         Map<Pair<CreativeModeTab.Row, Integer>, String> map = new HashMap<>();
+ 
+         for (ResourceKey<CreativeModeTab> resourceKey : BuiltInRegistries.CREATIVE_MODE_TAB.registryKeySet()) {
+@@ -1992,7 +_,12 @@
+             if (string1 != null) {
+                 throw new IllegalArgumentException("Duplicate position: " + string + " vs. " + string1);
+             }
+-        }
++        }*/
++        /*
++         * Defer the duplication checks to when fabric performs them (see mixin below).
++         * It is preserved just in case, but fabric's pagination logic should prevent any from happening anyway.
++         */
++        // canceled
+     }
+ 
+     public static CreativeModeTab getDefaultTab() {
+@@ -2109,6 +_,69 @@
+         streamAllTabs()
+             .filter(creativeModeTab -> creativeModeTab.getType() != CreativeModeTab.Type.CATEGORY)
+             .forEach(creativeModeTab -> creativeModeTab.buildContents(parameters));
++        final List<ResourceKey<CreativeModeTab>> vanillaTabs = List.of(BUILDING_BLOCKS, COLORED_BLOCKS, NATURAL_BLOCKS, FUNCTIONAL_BLOCKS, REDSTONE_BLOCKS, HOTBAR, SEARCH, TOOLS_AND_UTILITIES, COMBAT, FOOD_AND_DRINKS, INGREDIENTS, SPAWN_EGGS, OP_BLOCKS, INVENTORY);
++
++        int count = 0;
++
++        Comparator<Holder.Reference<CreativeModeTab>> entryComparator = (e1, e2) -> {
++            // Non-displayable tabs should come last for proper pagination
++            int displayCompare = Boolean.compare(e1.value().shouldDisplay(), e2.value().shouldDisplay());
++
++            if (displayCompare != 0) {
++                return -displayCompare;
++            } else {
++                // Ensure a deterministic order
++                return compareNamespaceFirst(e1.key().registry(), e2.key().registry());
++            }
++        };
++        final List<Holder.Reference<CreativeModeTab>> sortedCreativeModeTabs = BuiltInRegistries.CREATIVE_MODE_TAB.listElements()
++                .sorted(entryComparator)
++                .toList();
++
++        for (Holder.Reference<CreativeModeTab> reference : sortedCreativeModeTabs) {
++            final CreativeModeTab creativeModeTab = reference.value();
++            final FabricItemGroupImpl vanillaCreativeModeTab = (FabricItemGroupImpl) creativeModeTab;
++
++            if (vanillaTabs.contains(reference.key())) {
++                // Vanilla tab goes on the first page.
++                vanillaCreativeModeTab.fabric_setPage(0);
++                continue;
++            }
++
++            vanillaCreativeModeTab.fabric_setPage((count / TABS_PER_PAGE) + 1);
++            int pageIndex = count % TABS_PER_PAGE;
++            CreativeModeTab.Row row = pageIndex < (TABS_PER_PAGE / 2) ? CreativeModeTab.Row.TOP : CreativeModeTab.Row.BOTTOM;
++            creativeModeTab.setRow(row);
++            creativeModeTab.setColumn(row == CreativeModeTab.Row.TOP ? pageIndex % TABS_PER_PAGE : (pageIndex - TABS_PER_PAGE / 2) % (TABS_PER_PAGE));
++
++            count++;
++        }
++
++        // Overlapping tab detection logic, with support for pages.
++        record CreativeModeTabPosition(CreativeModeTab.Row row, int column, int page) { }
++        var map = new HashMap<CreativeModeTabPosition, String>();
++
++        for (ResourceKey<CreativeModeTab> resourceKey : BuiltInRegistries.CREATIVE_MODE_TAB.registryKeySet()) {
++            final CreativeModeTab creativeModeTab = BuiltInRegistries.CREATIVE_MODE_TAB.getValueOrThrow(resourceKey);
++            final FabricItemGroupImpl vanillaCreativeModeTab = (FabricItemGroupImpl) creativeModeTab;
++            final String displayName = creativeModeTab.getDisplayName().getString();
++            final var position = new CreativeModeTabPosition(creativeModeTab.row(), creativeModeTab.column(), vanillaCreativeModeTab.fabric_getPage());
++            final String existingName = map.put(position, displayName);
++
++            if (existingName != null) {
++                throw new IllegalArgumentException("Duplicate position: (%s) for creative mode tabs %s vs %s".formatted(position, displayName, existingName));
++            }
++        }
++    }
++
++    private static int compareNamespaceFirst(ResourceLocation a, ResourceLocation b) {
++        int c = a.getNamespace().compareTo(b.getNamespace());
++
++        if (c != 0) {
++            return c;
++        }
++
++        return a.getPath().compareTo(b.getPath());
+     }
+ 
+     public static boolean tryRebuildTabContents(FeatureFlagSet enabledFeatures, boolean hasPermissions, HolderLookup.Provider registries) {

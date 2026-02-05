@@ -1,0 +1,130 @@
+--- a/net/minecraft/world/item/CreativeModeTab.java
++++ b/net/minecraft/world/item/CreativeModeTab.java
+@@ -1,9 +_,17 @@
+ package net.minecraft.world.item;
+ 
+ import java.util.Collection;
++import java.util.LinkedList;
++import java.util.Objects;
+ import java.util.Set;
+ import java.util.function.Supplier;
+ import javax.annotation.Nullable;
++
++import net.fabricmc.fabric.api.event.Event;
++import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroupEntries;
++import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
++import net.fabricmc.fabric.impl.itemgroup.FabricItemGroupImpl;
++import net.fabricmc.fabric.impl.itemgroup.ItemGroupEventsImpl;
+ import net.minecraft.core.HolderLookup;
+ import net.minecraft.core.registries.BuiltInRegistries;
+ import net.minecraft.network.chat.Component;
+@@ -12,15 +_,15 @@
+ import net.minecraft.world.flag.FeatureFlagSet;
+ import net.minecraft.world.level.ItemLike;
+ 
+-public class CreativeModeTab {
++public class CreativeModeTab implements FabricItemGroupImpl {
+     static final ResourceLocation DEFAULT_BACKGROUND = createTextureLocation("items");
+     private final Component displayName;
+     ResourceLocation backgroundTexture = DEFAULT_BACKGROUND;
+     boolean canScroll = true;
+     boolean showTitle = true;
+     boolean alignedRight = false;
+-    private final CreativeModeTab.Row row;
+-    private final int column;
++    private CreativeModeTab.Row row;
++    private int column;
+     private final CreativeModeTab.Type type;
+     @Nullable
+     private ItemStack iconItemStack;
+@@ -28,6 +_,7 @@
+     private Set<ItemStack> displayItemsSearchTab = ItemStackLinkedSet.createTypeAndComponentsSet();
+     private final Supplier<ItemStack> iconGenerator;
+     private final CreativeModeTab.DisplayItemsGenerator displayItemsGenerator;
++    private int page = -1;
+ 
+     CreativeModeTab(
+         CreativeModeTab.Row row,
+@@ -45,6 +_,14 @@
+         this.type = type;
+     }
+ 
++    public void setRow(CreativeModeTab.Row row) {
++        this.row = row;
++    }
++
++    public void setColumn(int column) {
++        this.column = column;
++    }
++
+     public static ResourceLocation createTextureLocation(String name) {
+         return ResourceLocation.withDefaultNamespace("textures/gui/container/creative_inventory/tab_" + name + ".png");
+     }
+@@ -109,6 +_,37 @@
+         this.displayItemsGenerator.accept(parameters, itemDisplayBuilder);
+         this.displayItems = itemDisplayBuilder.tabContents;
+         this.displayItemsSearchTab = itemDisplayBuilder.searchTabContents;
++        // Do not modify special creative mode tabs (except Game Master Blocks) at all.
++        // Special creative mode tabs include Saved Hotbars, Search, and Survival Inventory.
++        // Note, search gets modified as part of the parent creative mode tab.
++        if (this.isAlignedRight() && resourceKey != CreativeModeTabs.OP_BLOCKS) return;
++
++        // Sanity check for the injection point. It should be after these fields are set.
++        Objects.requireNonNull(displayItems, "displayStacks");
++        Objects.requireNonNull(displayItemsSearchTab, "searchTabStacks");
++
++        // Convert the entries to lists
++        var mutableDisplayStacks = new LinkedList<>(displayItems);
++        var mutableSearchTabStacks = new LinkedList<>(displayItemsSearchTab);
++        var entries = new FabricItemGroupEntries(parameters, mutableDisplayStacks, mutableSearchTabStacks);
++
++        // Now trigger the events
++        if (resourceKey != CreativeModeTabs.OP_BLOCKS || parameters.hasPermissions()) {
++            final Event<ItemGroupEvents.ModifyEntries> modifyEntriesEvent = ItemGroupEventsImpl.getModifyEntriesEvent(resourceKey);
++
++            if (modifyEntriesEvent != null) {
++                modifyEntriesEvent.invoker().modifyEntries(entries);
++            }
++
++            ItemGroupEvents.MODIFY_ENTRIES_ALL.invoker().modifyEntries(this, entries);
++        }
++
++        // Convert the stacks back to sets after the events had a chance to modify them
++        displayItems.clear();
++        displayItems.addAll(mutableDisplayStacks);
++
++        displayItemsSearchTab.clear();
++        displayItemsSearchTab.addAll(mutableSearchTabStacks);
+     }
+ 
+     public Collection<ItemStack> getDisplayItems() {
+@@ -123,6 +_,20 @@
+         return this.displayItemsSearchTab.contains(stack);
+     }
+ 
++    @Override
++    public int fabric_getPage() {
++        if (page < 0) {
++            throw new IllegalStateException("Creative mode tab has no page");
++        }
++
++        return page;
++    }
++
++    @Override
++    public void fabric_setPage(int page) {
++        this.page = page;
++    }
++
+     public static class Builder {
+         private static final CreativeModeTab.DisplayItemsGenerator EMPTY_GENERATOR = (parameters, output) -> {};
+         private final CreativeModeTab.Row row;
+@@ -280,7 +_,7 @@
+         BOTTOM;
+     }
+ 
+-    protected static enum TabVisibility {
++    public static enum TabVisibility {
+         PARENT_AND_SEARCH_TABS,
+         PARENT_TAB_ONLY,
+         SEARCH_TAB_ONLY;
