@@ -12,17 +12,14 @@
  import net.minecraft.CrashReport;
  import net.minecraft.CrashReportCategory;
  import net.minecraft.FileUtil;
-@@ -559,7 +_,10 @@
+@@ -559,6 +_,7 @@
          Runtime.getRuntime().addShutdownHook(new org.bukkit.craftbukkit.util.ServerShutdownThread(this));
          // CraftBukkit end
          this.paperConfigurations = services.paper().configurations(); // Paper - add paper configuration files
-+        BiomeModificationImpl.INSTANCE.finalizeWorldGen(getRegistryManager());// Fabric
++        BiomeModificationImpl.INSTANCE.finalizeWorldGen(registryAccess());// Fabric
      }
-+
-+    public abstract RegistryAccess.Frozen getRegistryManager();// Fabric
  
      private void readScoreboard(DimensionDataStorage dataStorage) {
-         dataStorage.computeIfAbsent(ServerScoreboard.TYPE);
 @@ -735,7 +_,8 @@
          }
          this.initWorldBorder(serverLevelData, serverLevel);

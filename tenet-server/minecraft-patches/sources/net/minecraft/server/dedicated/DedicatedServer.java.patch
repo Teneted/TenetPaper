@@ -1,0 +1,10 @@
+--- a/net/minecraft/server/dedicated/DedicatedServer.java
++++ b/net/minecraft/server/dedicated/DedicatedServer.java
+@@ -33,6 +_,7 @@
+ import net.minecraft.Util;
+ import net.minecraft.commands.CommandSourceStack;
+ import net.minecraft.core.BlockPos;
++import net.minecraft.core.RegistryAccess;
+ import net.minecraft.server.ConsoleInput;
+ import net.minecraft.server.MinecraftServer;
+ import net.minecraft.server.ServerInterface;
