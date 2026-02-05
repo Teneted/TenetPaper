@@ -1,0 +1,19 @@
+--- a/net/minecraft/world/level/LevelReader.java
++++ b/net/minecraft/world/level/LevelReader.java
+@@ -34,6 +_,16 @@
+     }
+     // Paper end - rewrite chunk system
+ 
++    @Override
++    default boolean hasBiomes() {
++        return true;
++    }
++
++    @Override
++    default Holder<Biome> getBiomeFabric(BlockPos pos) {
++        return getBiome(pos);
++    }
++
+     @Nullable
+     ChunkAccess getChunk(int x, int z, ChunkStatus chunkStatus, boolean requireChunk);
+ 

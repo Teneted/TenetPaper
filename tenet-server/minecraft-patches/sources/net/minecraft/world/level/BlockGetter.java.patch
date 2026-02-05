@@ -1,0 +1,20 @@
+--- a/net/minecraft/world/level/BlockGetter.java
++++ b/net/minecraft/world/level/BlockGetter.java
+@@ -8,6 +_,8 @@
+ import java.util.function.Supplier;
+ import java.util.stream.Stream;
+ import javax.annotation.Nullable;
++
++import net.fabricmc.fabric.api.blockgetter.v2.FabricBlockGetter;
+ import net.minecraft.core.BlockPos;
+ import net.minecraft.core.Direction;
+ import net.minecraft.core.Vec3i;
+@@ -21,7 +_,7 @@
+ import net.minecraft.world.phys.Vec3;
+ import net.minecraft.world.phys.shapes.VoxelShape;
+ 
+-public interface BlockGetter extends LevelHeightAccessor {
++public interface BlockGetter extends LevelHeightAccessor, FabricBlockGetter {
+     @Nullable
+     BlockEntity getBlockEntity(BlockPos pos);
+ 
