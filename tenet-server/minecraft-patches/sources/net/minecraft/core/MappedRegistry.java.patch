@@ -1,6 +1,61 @@
 --- a/net/minecraft/core/MappedRegistry.java
 +++ b/net/minecraft/core/MappedRegistry.java
-@@ -36,7 +_,7 @@
+@@ -1,15 +_,24 @@
+ package net.minecraft.core;
+ 
++import com.google.common.collect.BiMap;
++import com.google.common.collect.HashBiMap;
+ import com.google.common.collect.ImmutableMap;
+ import com.google.common.collect.Iterators;
+ import com.google.common.collect.ImmutableMap.Builder;
+ import com.mojang.serialization.Lifecycle;
++import it.unimi.dsi.fastutil.ints.Int2IntMap;
++import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
++import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
++import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
++import it.unimi.dsi.fastutil.objects.Object2IntMap;
++import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+ import it.unimi.dsi.fastutil.objects.ObjectList;
+ import it.unimi.dsi.fastutil.objects.Reference2IntMap;
+ import it.unimi.dsi.fastutil.objects.Reference2IntOpenHashMap;
+ import java.util.ArrayList;
+ import java.util.Collections;
++import java.util.Comparator;
+ import java.util.HashMap;
+ import java.util.IdentityHashMap;
+ import java.util.Iterator;
+@@ -22,21 +_,36 @@
+ import java.util.function.BiConsumer;
+ import java.util.stream.Stream;
+ import javax.annotation.Nullable;
++
++import net.fabricmc.fabric.api.event.Event;
++import net.fabricmc.fabric.api.event.EventFactory;
++import net.fabricmc.fabric.api.event.registry.FabricRegistry;
++import net.fabricmc.fabric.api.event.registry.RegistryAttribute;
++import net.fabricmc.fabric.api.event.registry.RegistryAttributeHolder;
++import net.fabricmc.fabric.api.event.registry.RegistryEntryAddedCallback;
++import net.fabricmc.fabric.api.event.registry.RegistryIdRemapCallback;
++import net.fabricmc.fabric.impl.registry.sync.ListenableRegistry;
++import net.fabricmc.fabric.impl.registry.sync.RegistrySyncManager;
++import net.fabricmc.fabric.impl.registry.sync.RemapException;
++import net.fabricmc.fabric.impl.registry.sync.RemapStateImpl;
++import net.fabricmc.fabric.impl.registry.sync.RemappableRegistry;
+ import net.minecraft.Util;
+ import net.minecraft.resources.ResourceKey;
+ import net.minecraft.resources.ResourceLocation;
+ import net.minecraft.tags.TagKey;
+ import net.minecraft.tags.TagLoader;
+ import net.minecraft.util.RandomSource;
++import org.slf4j.Logger;
++import org.slf4j.LoggerFactory;
+ 
+-public class MappedRegistry<T> implements WritableRegistry<T> {
++public class MappedRegistry<T> implements WritableRegistry<T>, RemappableRegistry, ListenableRegistry<T>, FabricRegistry {
+     private final ResourceKey<? extends Registry<T>> key;
+     private final ObjectList<Holder.Reference<T>> byId = new ObjectArrayList<>(256);
+     private final Reference2IntMap<T> toId = Util.make(new Reference2IntOpenHashMap<>(2048), map -> map.defaultReturnValue(-1)); // Paper - Perf: Use bigger expected size to reduce collisions
      private final Map<ResourceLocation, Holder.Reference<T>> byLocation = new HashMap<>(2048); // Paper - Perf: Use bigger expected size to reduce collisions
      private final Map<ResourceKey<T>, Holder.Reference<T>> byKey = new HashMap<>(2048); // Paper - Perf: Use bigger expected size to reduce collisions
      private final Map<T, Holder.Reference<T>> byValue = new IdentityHashMap<>(2048); // Paper - Perf: Use bigger expected size to reduce collisions
@@ -9,3 +64,427 @@
      private Lifecycle registryLifecycle;
      private final Map<TagKey<T>, HolderSet.Named<T>> frozenTags = new IdentityHashMap<>();
      MappedRegistry.TagSet<T> allTags = MappedRegistry.TagSet.unbound();
+@@ -45,6 +_,23 @@
+     private Map<T, Holder.Reference<T>> unregisteredIntrusiveHolders;
+     // Paper start - support pre-filling in registry mod API
+     private final Map<ResourceLocation, T> temporaryUnfrozenMap = new HashMap<>();
++    private static final Set<String> VANILLA_NAMESPACES = Set.of("minecraft", "brigadier");
++    private static final Logger FABRIC_LOGGER = LoggerFactory.getLogger(MappedRegistry.class);
++    private Event<RegistryEntryAddedCallback<T>> fabric_addObjectEvent;
++    private Event<RegistryIdRemapCallback<T>> fabric_postRemapEvent;
++    private Object2IntMap<ResourceLocation> fabric_prevIndexedEntries;
++    private BiMap<ResourceLocation, Holder.Reference<T>> fabric_prevEntries;
++    private Map<ResourceLocation, ResourceLocation> aliases = new HashMap<>();
++
++    @Override
++    public Event<RegistryEntryAddedCallback<T>> fabric_getAddObjectEvent() {
++        return fabric_addObjectEvent;
++    }
++
++    @Override
++    public Event<RegistryIdRemapCallback<T>> fabric_getRemapEvent() {
++        return fabric_postRemapEvent;
++    }
+ 
+     @Override
+     public Optional<T> getValueForCopying(final ResourceKey<T> resourceKey) {
+@@ -80,6 +_,44 @@
+         if (hasIntrusiveHolders) {
+             this.unregisteredIntrusiveHolders = new IdentityHashMap<>();
+         }
++        fabric_addObjectEvent = EventFactory.createArrayBacked(RegistryEntryAddedCallback.class,
++                (callbacks) -> (rawId, id, object) -> {
++                    for (RegistryEntryAddedCallback<T> callback : callbacks) {
++                        callback.onEntryAdded(rawId, id, object);
++                    }
++                }
++        );
++        // aliasing: check that no new entries use the id of an alias
++        fabric_addObjectEvent.register((rawId, id, object) -> {
++            if (aliases.containsKey(id)) {
++                throw new IllegalArgumentException(
++                        "Tried registering %s to registry %s, but it is already an alias (for %s)".formatted(
++                                id,
++                                this.key,
++                                aliases.get(id)
++                        )
++                );
++            }
++        });
++        fabric_postRemapEvent = EventFactory.createArrayBacked(RegistryIdRemapCallback.class,
++                (callbacks) -> (a) -> {
++                    for (RegistryIdRemapCallback<T> callback : callbacks) {
++                        callback.onRemap(a);
++                    }
++                }
++        );
++    }
++
++    private void onChange(ResourceKey<T> resourceKey) {
++        if (RegistrySyncManager.postBootstrap || !VANILLA_NAMESPACES.contains(resourceKey.registry().getNamespace())) {
++            RegistryAttributeHolder holder = RegistryAttributeHolder.get(key());
++
++            if (!holder.hasAttribute(RegistryAttribute.MODDED)) {
++                ResourceLocation id = key().registry();
++                FABRIC_LOGGER.debug("Registry {} has been marked as modded, holder {} was changed", id, resourceKey.registry());
++                RegistryAttributeHolder.get(key()).addAttribute(RegistryAttribute.MODDED);
++            }
++        }
+     }
+ 
+     @Override
+@@ -136,15 +_,278 @@
+             this.registryLifecycle = this.registryLifecycle.add(registrationInfo.lifecycle());
+             this.temporaryUnfrozenMap.put(key.location(), value); // Paper - support pre-filling in registry mod API
+             this.injectFluidRegister(key, value); // Paper - fluid method optimisations
++            reference.bindValue(value);
++            fabric_addObjectEvent.invoker().onEntryAdded(toId.getInt(value), key.registry(), value);
++            onChange(key);
+             return reference;
+         }
+     }
+ 
++    @Override
++    public void remap(Object2IntMap<ResourceLocation> remoteIndexedEntries, RemapMode mode) throws RemapException {
++        // Throw on invalid conditions.
++        switch (mode) {
++            case AUTHORITATIVE:
++                break;
++            case REMOTE: {
++                List<String> strings = null;
++
++                for (ResourceLocation remoteId : remoteIndexedEntries.keySet()) {
++                    if (this.containsKey(remoteId)) {
++                        continue;
++                    }
++
++                    if (strings == null) {
++                        strings = new ArrayList<>();
++                    }
++
++                    strings.add(" - " + remoteId);
++                }
++
++                if (strings != null) {
++                    StringBuilder builder = new StringBuilder("Received ID map for " + key() + " contains IDs unknown to the receiver!");
++
++                    for (String s : strings) {
++                        builder.append('\n').append(s);
++                    }
++
++                    throw new RemapException(builder.toString());
++                }
++
++                break;
++            }
++        }
++
++        // Make a copy of the previous maps.
++        // For now, only one is necessary - on an integrated server scenario,
++        // AUTHORITATIVE == CLIENT, which is fine.
++        // The reason we preserve the first one is because it contains the
++        // vanilla order of IDs before mods, which is crucial for vanilla server
++        // compatibility.
++        if (fabric_prevIndexedEntries == null) {
++            fabric_prevIndexedEntries = new Object2IntOpenHashMap<>();
++            fabric_prevEntries = HashBiMap.create(byLocation);
++
++            for (T o : this) {
++                fabric_prevIndexedEntries.put(getKey(o), getId(o));
++            }
++        }
++
++        Int2ObjectMap<ResourceLocation> oldIdMap = new Int2ObjectOpenHashMap<>();
++
++        for (T o : this) {
++            oldIdMap.put(getId(o), getKey(o));
++        }
++
++        // If we're AUTHORITATIVE, we append entries which only exist on the
++        // local side to the new entry list. For REMOTE, we instead drop them.
++        switch (mode) {
++            case AUTHORITATIVE: {
++                int maxValue = 0;
++
++                Object2IntMap<ResourceLocation> oldRemoteIndexedEntries = remoteIndexedEntries;
++                remoteIndexedEntries = new Object2IntOpenHashMap<>();
++
++                for (ResourceLocation id : oldRemoteIndexedEntries.keySet()) {
++                    int v = oldRemoteIndexedEntries.getInt(id);
++                    remoteIndexedEntries.put(id, v);
++                    if (v > maxValue) maxValue = v;
++                }
++
++                for (ResourceLocation id : keySet()) {
++                    if (!remoteIndexedEntries.containsKey(id)) {
++                        FABRIC_LOGGER.warn("Adding " + id + " to saved/remote registry.");
++                        remoteIndexedEntries.put(id, ++maxValue);
++                    }
++                }
++
++                break;
++            }
++            case REMOTE: {
++                int maxId = -1;
++
++                for (ResourceLocation id : keySet()) {
++                    if (remoteIndexedEntries.containsKey(id)) {
++                        continue;
++                    }
++
++                    if (maxId < 0) {
++                        maxId = remoteIndexedEntries.values()
++                                .intStream()
++                                .max()
++                                .orElseThrow(() -> new RemapException("Failed to assign new id to client only registry entry"));
++                    }
++
++                    maxId++;
++
++                    FABRIC_LOGGER.debug("An ID for {} was not sent by the server, assuming client only registry entry and assigning a new id ({}) in {}", id.toString(), maxId, key().registry().toString());
++                    remoteIndexedEntries.put(id, maxId);
++                }
++
++                break;
++            }
++        }
++
++        Int2IntMap idMap = new Int2IntOpenHashMap();
++
++        for (int i = 0; i < byId.size(); i++) {
++            Holder.Reference<T> reference = byId.get(i);
++
++            // Unused id, can happen if there are holes in the registry.
++            if (reference == null) {
++                throw new RemapException("Unused id " + i + " in registry " + key().registry());
++            }
++
++            ResourceLocation id = reference.key().registry();
++
++            // see above note
++            if (remoteIndexedEntries.containsKey(id)) {
++                idMap.put(i, remoteIndexedEntries.getInt(id));
++            }
++        }
++
++        // entries was handled above, if it was necessary.
++        byId.clear();
++        toId.clear();
++
++        List<ResourceLocation> orderedRemoteEntries = new ArrayList<>(remoteIndexedEntries.keySet());
++        orderedRemoteEntries.sort(Comparator.comparingInt(remoteIndexedEntries::getInt));
++
++        for (ResourceLocation identifier : orderedRemoteEntries) {
++            int id = remoteIndexedEntries.getInt(identifier);
++            Holder.Reference<T> object = byLocation.get(identifier);
++
++            // Warn if an object is missing from the local registry.
++            // This should only happen in AUTHORITATIVE mode, and as such we
++            // throw an exception otherwise.
++            if (object == null) {
++                if (mode != RemapMode.AUTHORITATIVE) {
++                    throw new RemapException(identifier + " missing from registry, but requested!");
++                } else {
++                    FABRIC_LOGGER.warn(identifier + " missing from registry, but requested!");
++                }
++
++                continue;
++            }
++
++            // Add the new object
++            byId.size(Math.max(this.byId.size(), id + 1));
++
++            if (byId.get(id) != null) {
++                throw new IllegalStateException("Raw ID already populated");
++            }
++
++            byId.set(id, object);
++            toId.put(object.value(), id);
++        }
++
++        fabric_getRemapEvent().invoker().onRemap(new RemapStateImpl<>(this, oldIdMap, idMap));
++    }
++
++    @Override
++    public void unmap() throws RemapException {
++        if (fabric_prevIndexedEntries != null) {
++            List<ResourceLocation> addedIds = new ArrayList<>();
++
++            // Emit AddObject events for previously culled objects.
++            for (ResourceLocation id : fabric_prevEntries.keySet()) {
++                if (!byLocation.containsKey(id)) {
++                    if (!fabric_prevIndexedEntries.containsKey(id)) {
++                        throw new IllegalStateException("id missing from previous indexed entries");
++                    }
++
++                    addedIds.add(id);
++                }
++            }
++
++            byLocation.clear();
++            byKey.clear();
++
++            byLocation.putAll(fabric_prevEntries);
++
++            for (Map.Entry<ResourceLocation, Holder.Reference<T>> entry : fabric_prevEntries.entrySet()) {
++                ResourceKey<T> entryKey = ResourceKey.create(key(), entry.getKey());
++                byKey.put(entryKey, entry.getValue());
++            }
++
++            remap(fabric_prevIndexedEntries, RemapMode.AUTHORITATIVE);
++
++            for (ResourceLocation id : addedIds) {
++                fabric_getAddObjectEvent().invoker().onEntryAdded(toId.getInt(byLocation.get(id)), id, getValue(id));
++            }
++
++            fabric_prevIndexedEntries = null;
++            fabric_prevEntries = null;
++        }
++    }
++
++    @Override
++    public void addAlias(ResourceLocation old, ResourceLocation newId) {
++        Objects.requireNonNull(old, "alias cannot be null");
++        Objects.requireNonNull(newId, "aliased id cannot be null");
++
++        if (aliases.containsKey(old)) {
++            throw new IllegalArgumentException(
++                    "Tried adding %s as an alias for %s, but it is already an alias (for %s) in registry %s".formatted(
++                            old,
++                            newId,
++                            aliases.get(old),
++                            this.key
++                    )
++            );
++        }
++
++        if (this.byLocation.containsKey(old)) {
++            throw new IllegalArgumentException(
++                    "Tried adding %s as an alias, but it is already present in registry %s".formatted(
++                            old,
++                            this.key
++                    )
++            );
++        }
++
++        if (old.equals(aliases.get(newId))) {
++            // since an alias corresponds to at most one identifier, this is the only way to create a cycle
++            // that doesn't already fall under the first condition
++            throw new IllegalArgumentException(
++                    "Making %1$s an alias of %2$s would create a cycle, as %2$s is already an alias of %1$s (registry %3$s)".formatted(
++                            old,
++                            newId,
++                            this.key
++                    )
++            );
++        }
++
++        if (!this.byLocation.containsKey(newId)) {
++            FABRIC_LOGGER.warn(
++                    "Adding {} as an alias for {}, but the latter doesn't exist in registry {}",
++                    old,
++                    newId,
++                    this.key
++            );
++        }
++
++        validateWrite();
++
++        // recompute alias map to preserve invariant, i.e. make sure all keys point to a non-alias ID
++        ResourceLocation deepest = aliases.getOrDefault(newId, newId);
++
++        for (Map.Entry<ResourceLocation, ResourceLocation> entry : aliases.entrySet()) {
++            if (old.equals(entry.getValue())) {
++                entry.setValue(deepest);
++            }
++        }
++
++        aliases.put(old, deepest);
++        FABRIC_LOGGER.debug("Adding alias {} for {} in registry {}", old, newId, this.key);
++    }
++
+     @Nullable
+     @Override
+     public ResourceLocation getKey(T value) {
+         Holder.Reference<T> reference = this.byValue.get(value);
+-        return reference != null ? reference.key().location() : null;
++        ResourceLocation original = reference != null ? reference.key().location() : null;
++        return aliases.getOrDefault(original, original);
+     }
+ 
+     @Override
+@@ -160,7 +_,16 @@
+     @Nullable
+     @Override
+     public T getValue(@Nullable ResourceKey<T> key) {
+-        return getValueFromNullable(this.byKey.get(key));
++        return getValueFromNullable(this.byKey.get(aliasResourceKeyParameter(key)));
++    }
++
++    private ResourceKey<T> aliasResourceKeyParameter(ResourceKey<T> original) {
++        if (original == null) {
++            return null;
++        }
++
++        ResourceLocation aliased = aliases.get(original.registry());
++        return aliased == null ? original : ResourceKey.create(original.registryKey(), aliased);
+     }
+ 
+     @Nullable
+@@ -176,12 +_,12 @@
+ 
+     @Override
+     public Optional<Holder.Reference<T>> get(ResourceLocation key) {
+-        return Optional.ofNullable(this.byLocation.get(key));
++        return Optional.ofNullable(this.byLocation.get(aliases.getOrDefault(key, key)));
+     }
+ 
+     @Override
+     public Optional<Holder.Reference<T>> get(ResourceKey<T> resourceKey) {
+-        return Optional.ofNullable(this.byKey.get(resourceKey));
++        return Optional.ofNullable(this.byKey.get(aliasResourceKeyParameter(resourceKey)));
+     }
+ 
+     @Override
+@@ -196,7 +_,7 @@
+     }
+ 
+     Holder.Reference<T> getOrCreateHolderOrThrow(ResourceKey<T> key) {
+-        return this.byKey.computeIfAbsent(key, key1 -> {
++        return this.byKey.computeIfAbsent(aliasResourceKeyParameter(key), key1 -> {
+             if (this.unregisteredIntrusiveHolders != null) {
+                 throw new IllegalStateException("This registry can't create new holders without value");
+             } else {
+@@ -213,7 +_,7 @@
+ 
+     @Override
+     public Optional<RegistrationInfo> registrationInfo(ResourceKey<T> key) {
+-        return Optional.ofNullable(this.registrationInfos.get(key));
++        return Optional.ofNullable(this.registrationInfos.get(aliasResourceKeyParameter(key)));
+     }
+ 
+     @Override
+@@ -229,7 +_,7 @@
+     @Nullable
+     @Override
+     public T getValue(@Nullable ResourceLocation key) {
+-        Holder.Reference<T> reference = this.byLocation.get(key);
++        Holder.Reference<T> reference = this.byLocation.get(aliases.getOrDefault(key, key));
+         return getValueFromNullable(reference);
+     }
+ 
+@@ -283,12 +_,12 @@
+ 
+     @Override
+     public boolean containsKey(ResourceLocation key) {
+-        return this.byLocation.containsKey(key);
++        return this.byLocation.containsKey(aliases.getOrDefault(key, key));
+     }
+ 
+     @Override
+     public boolean containsKey(ResourceKey<T> key) {
+-        return this.byKey.containsKey(key);
++        return this.byKey.containsKey(aliasResourceKeyParameter(key));
+     }
+ 
+     @Override

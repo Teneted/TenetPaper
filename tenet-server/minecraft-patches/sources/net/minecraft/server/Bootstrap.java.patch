@@ -1,0 +1,59 @@
+--- a/net/minecraft/server/Bootstrap.java
++++ b/net/minecraft/server/Bootstrap.java
+@@ -9,6 +_,10 @@
+ import java.util.concurrent.atomic.AtomicLong;
+ import java.util.function.Function;
+ import java.util.function.Supplier;
++
++import net.fabricmc.fabric.impl.registry.sync.RegistrySyncManager;
++import net.fabricmc.fabric.impl.registry.sync.trackers.StateIdTracker;
++import net.fabricmc.fabric.impl.registry.sync.trackers.vanilla.BlockItemTracker;
+ import net.minecraft.SharedConstants;
+ import net.minecraft.SuppressForbidden;
+ import net.minecraft.commands.Commands;
+@@ -24,10 +_,15 @@
+ import net.minecraft.world.flag.FeatureFlags;
+ import net.minecraft.world.item.CreativeModeTabs;
+ import net.minecraft.world.item.Item;
++import net.minecraft.world.item.Items;
+ import net.minecraft.world.level.GameRules;
++import net.minecraft.world.level.block.Block;
++import net.minecraft.world.level.block.Blocks;
+ import net.minecraft.world.level.block.ComposterBlock;
+ import net.minecraft.world.level.block.FireBlock;
+ import net.minecraft.world.level.block.state.BlockBehaviour;
++import net.minecraft.world.level.material.Fluid;
++import net.minecraft.world.level.material.Fluids;
+ import org.slf4j.Logger;
+ 
+ @SuppressForbidden(
+@@ -55,10 +_,28 @@
+                     EntitySelectorOptions.bootStrap();
+                     DispenseItemBehavior.bootStrap();
+                     CauldronInteraction.bootStrap();
++                    // These seemingly pointless accesses are done to make sure each
++                    // static initializer is called, to register vanilla-provided blocks
++                    // and items from the respective classes - otherwise, they would
++                    // duplicate our calls from below.
++                    Object oBlock = Blocks.AIR;
++                    Object oFluid = Fluids.EMPTY;
++                    Object oItem = Items.AIR;
++
++                    // state ID tracking
++                    StateIdTracker.register(BuiltInRegistries.BLOCK, Block.BLOCK_STATE_REGISTRY, (block) -> block.getStateDefinition().getPossibleStates());
++                    StateIdTracker.register(BuiltInRegistries.FLUID, Fluid.FLUID_STATE_REGISTRY, (fluid) -> fluid.getStateDefinition().getPossibleStates());
++
++                    // map tracking
++                    BlockItemTracker.register(BuiltInRegistries.ITEM);
++
++                    RegistrySyncManager.bootstrapRegistries();
++                    BuiltInRegistries.createContents();
+                     // Paper start
++                    /*
+                     BuiltInRegistries.bootStrap(() -> {
+                         io.papermc.paper.world.worldgen.OptionallyFlatBedrockConditionSource.bootstrap(); // Paper - Flat bedrock generator settings
+-                    });
++                    });*/
+                     // Paper end
+                     CreativeModeTabs.validate();
+                     wrapStreams();

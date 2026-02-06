@@ -1,0 +1,101 @@
+--- a/net/minecraft/core/IdMapper.java
++++ b/net/minecraft/core/IdMapper.java
+@@ -2,14 +_,19 @@
+ 
+ import com.google.common.collect.Iterators;
+ import com.google.common.collect.Lists;
++import it.unimi.dsi.fastutil.ints.Int2IntMap;
++import it.unimi.dsi.fastutil.ints.Int2IntMaps;
+ import it.unimi.dsi.fastutil.objects.Reference2IntMap;
+ import it.unimi.dsi.fastutil.objects.Reference2IntOpenHashMap;
++import net.fabricmc.fabric.impl.registry.sync.RemovableIdMapper;
++
++import java.util.ArrayList;
+ import java.util.Iterator;
+ import java.util.List;
+ import java.util.Objects;
+ import javax.annotation.Nullable;
+ 
+-public class IdMapper<T> implements IdMap<T> {
++public class IdMapper<T> implements IdMap<T>, RemovableIdMapper<T> {
+     private int nextId;
+     private final Reference2IntMap<T> tToId;
+     private final List<T> idToT;
+@@ -64,5 +_,77 @@
+     @Override
+     public int size() {
+         return this.tToId.size();
++    }
++
++    @Override
++    public void fabric_clear() {
++        nextId = 0;
++        tToId.clear();
++        idToT.clear();
++    }
++
++    private void fabric_removeInner(T o) {
++        int value = tToId.removeInt(o);
++        idToT.set(value, null);
++
++        while (nextId > 1 && idToT.get(nextId - 1) == null) {
++            nextId--;
++        }
++    }
++
++    @Override
++    public void fabric_remove(T o) {
++        if (tToId.containsKey(o)) {
++            fabric_removeInner(o);
++        }
++    }
++
++    @Override
++    public void fabric_removeId(int i) {
++        List<T> removals = new ArrayList<>();
++
++        for (T o : tToId.keySet()) {
++            int j = tToId.getInt(o);
++
++            if (i == j) {
++                removals.add(o);
++            }
++        }
++
++        removals.forEach(this::fabric_removeInner);
++    }
++
++    @Override
++    public void fabric_remapId(int from, int to) {
++        fabric_remapIds(Int2IntMaps.singleton(from, to));
++    }
++
++    @Override
++    public void fabric_remapIds(Int2IntMap map) {
++        // remap idMap
++        tToId.replaceAll((a, b) -> map.get((int) b));
++
++        // remap list
++        nextId = 0;
++        List<T> oldList = new ArrayList<>(idToT);
++        idToT.clear();
++
++        for (int k = 0; k < oldList.size(); k++) {
++            T o = oldList.get(k);
++
++            if (o != null) {
++                int i = map.getOrDefault(k, k);
++
++                while (idToT.size() <= i) {
++                    idToT.add(null);
++                }
++
++                idToT.set(i, o);
++
++                if (nextId <= i) {
++                    nextId = i + 1;
++                }
++            }
++        }
+     }
+ }
