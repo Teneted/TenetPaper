@@ -1,5 +1,6 @@
 package org.teneted.tenet;
 
+import net.fabricmc.fabric.impl.tag.convention.v2.TranslationConventionLogWarnings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,5 +11,6 @@ public class TenetMC {
 
     public static void init() {
         LOGGER.info("TenetModLoader is loading...");
+        TranslationConventionLogWarnings.onInitialize();
     }
 }
