@@ -1,0 +1,31 @@
+--- a/net/minecraft/world/level/block/state/BlockBehaviour.java
++++ b/net/minecraft/world/level/block/state/BlockBehaviour.java
+@@ -16,6 +_,8 @@
+ import java.util.function.ToIntFunction;
+ import java.util.stream.Stream;
+ import javax.annotation.Nullable;
++
++import net.fabricmc.fabric.api.event.player.BlockEvents;
+ import net.minecraft.Util;
+ import net.minecraft.core.BlockPos;
+ import net.minecraft.core.Direction;
+@@ -899,10 +_,19 @@
+         }
+ 
+         public InteractionResult useItemOn(ItemStack stack, Level level, Player player, InteractionHand hand, BlockHitResult hitResult) {
++            InteractionResult result = BlockEvents.USE_ITEM_ON.invoker().useItemOn(stack, this.asState(), level, hitResult.getBlockPos(), player, hand, hitResult);
++
++            if (result != null) {
++                return result;
++            }
+             return this.getBlock().useItemOn(stack, this.asState(), level, hitResult.getBlockPos(), player, hand, hitResult);
+         }
+ 
+         public InteractionResult useWithoutItem(Level level, Player player, BlockHitResult hitResult) {
++            InteractionResult result = BlockEvents.USE_WITHOUT_ITEM.invoker().useWithoutItem(this.asState(), level, hitResult.getBlockPos(), player, hitResult);
++            if (result != null) {
++                return result;
++            }
+             return this.getBlock().useWithoutItem(this.asState(), level, hitResult.getBlockPos(), player, hitResult);
+         }
+ 

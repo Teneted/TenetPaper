@@ -1,10 +1,11 @@
 --- a/net/minecraft/server/level/ServerPlayer.java
 +++ b/net/minecraft/server/level/ServerPlayer.java
-@@ -24,6 +_,12 @@
+@@ -24,6 +_,13 @@
  import java.util.stream.Collectors;
  import javax.annotation.Nonnull;
  import javax.annotation.Nullable;
 +
++import net.fabricmc.fabric.api.entity.FakePlayer;
 +import net.fabricmc.fabric.api.entity.event.v1.EntitySleepEvents;
 +import net.fabricmc.fabric.api.entity.event.v1.ServerEntityCombatEvents;
 +import net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents;
@@ -99,3 +100,14 @@
      }
  
      @Override
+@@ -2690,6 +_,10 @@
+     }
+ 
+     private GameType calculateGameModeForNewPlayer(@Nullable GameType gameType) {
++        // Set the default game mode of the fake player to survival, regardless of the servers forced game mode.
++        if ((Object) this instanceof FakePlayer) {
++            return GameType.SURVIVAL;
++        }
+         GameType forcedGameType = this.server.getForcedGameType();
+         if (forcedGameType != null) {
+             return forcedGameType;

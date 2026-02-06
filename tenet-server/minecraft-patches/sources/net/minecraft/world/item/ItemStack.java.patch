@@ -1,0 +1,23 @@
+--- a/net/minecraft/world/item/ItemStack.java
++++ b/net/minecraft/world/item/ItemStack.java
+@@ -19,6 +_,8 @@
+ import java.util.function.UnaryOperator;
+ import java.util.stream.Stream;
+ import javax.annotation.Nullable;
++
++import net.fabricmc.fabric.api.event.player.ItemEvents;
+ import net.minecraft.ChatFormatting;
+ import net.minecraft.advancements.CriteriaTriggers;
+ import net.minecraft.core.BlockPos;
+@@ -547,6 +_,11 @@
+         ItemStack itemStack = this.copy();
+         boolean flag = this.getUseDuration(player) <= 0;
+         InteractionResult interactionResult = this.getItem().use(level, player, hand);
++        InteractionResult result = ItemEvents.USE.invoker().use(level, player, hand);
++
++        if (result != null) {
++            return result;
++        }
+         return (InteractionResult)(flag && interactionResult instanceof InteractionResult.Success success
+             ? success.heldItemTransformedTo(
+                 success.heldItemTransformedTo() == null

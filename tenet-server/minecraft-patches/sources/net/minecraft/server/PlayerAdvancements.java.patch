@@ -1,0 +1,33 @@
+--- a/net/minecraft/server/PlayerAdvancements.java
++++ b/net/minecraft/server/PlayerAdvancements.java
+@@ -23,6 +_,8 @@
+ import java.util.Map.Entry;
+ import java.util.function.BiConsumer;
+ import javax.annotation.Nullable;
++
++import net.fabricmc.fabric.api.entity.FakePlayer;
+ import net.minecraft.FileUtil;
+ import net.minecraft.advancements.Advancement;
+ import net.minecraft.advancements.AdvancementHolder;
+@@ -73,6 +_,10 @@
+     }
+ 
+     public void setPlayer(ServerPlayer player) {
++        if (player instanceof FakePlayer) {
++            // Prevent fake players with the same UUID as a real player from stealing the real player's advancement tracker.
++            return;
++        }
+         this.player = player;
+     }
+ 
+@@ -167,6 +_,10 @@
+     }
+ 
+     public boolean award(AdvancementHolder advancement, String criterionKey) {
++        if (player instanceof FakePlayer) {
++            // Prevent granting advancements to fake players.
++            return false;
++        }
+         boolean flag = false;
+         AdvancementProgress orStartProgress = this.getOrStartProgress(advancement);
+         boolean isDone = orStartProgress.isDone();

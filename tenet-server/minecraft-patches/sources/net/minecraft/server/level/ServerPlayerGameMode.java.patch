@@ -1,0 +1,94 @@
+--- a/net/minecraft/server/level/ServerPlayerGameMode.java
++++ b/net/minecraft/server/level/ServerPlayerGameMode.java
+@@ -4,10 +_,17 @@
+ import java.util.List;
+ import java.util.Objects;
+ import javax.annotation.Nullable;
++
++import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
++import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
++import net.fabricmc.fabric.api.event.player.UseBlockCallback;
++import net.fabricmc.fabric.api.event.player.UseItemCallback;
+ import net.minecraft.SharedConstants;
+ import net.minecraft.advancements.CriteriaTriggers;
+ import net.minecraft.core.BlockPos;
+ import net.minecraft.core.Direction;
++import net.minecraft.network.protocol.Packet;
++import net.minecraft.network.protocol.game.ClientGamePacketListener;
+ import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
+ import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
+ import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
+@@ -179,6 +_,27 @@
+     }
+ 
+     public void handleBlockBreakAction(BlockPos pos, ServerboundPlayerActionPacket.Action action, Direction face, int maxBuildHeight, int sequence) {
++        if (action != ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK) return;
++        InteractionResult result = AttackBlockCallback.EVENT.invoker().interact(player, level, InteractionHand.MAIN_HAND, pos, face);
++
++        if (result != InteractionResult.PASS) {
++            // The client might have broken the block on its side, so make sure to let it know.
++            this.player.connection.send(new ClientboundBlockUpdatePacket(level, pos));
++
++            if (level.getBlockState(pos).hasBlockEntity()) {
++                BlockEntity blockEntity = level.getBlockEntity(pos);
++
++                if (blockEntity != null) {
++                    Packet<ClientGamePacketListener> updatePacket = blockEntity.getUpdatePacket();
++
++                    if (updatePacket != null) {
++                        this.player.connection.send(updatePacket);
++                    }
++                }
++            }
++
++            return;
++        }
+         if (!this.player.canInteractWithBlock(pos, 1.0)) {
+             if (true) return; // Paper - Don't allow digging into unloaded chunks; Don't notify if unreasonably far away
+             this.debugLogging(pos, false, sequence, "too far");
+@@ -388,6 +_,13 @@
+                 org.bukkit.block.BlockState state = bblock.getState();
+                 this.level.captureDrops = new java.util.ArrayList<>();
+                 // CraftBukkit end
++                boolean result = PlayerBlockBreakEvents.BEFORE.invoker().beforeBlockBreak(this.level, this.player, pos, blockState, blockEntity);
++
++                if (!result) {
++                    PlayerBlockBreakEvents.CANCELED.invoker().onBlockBreakCanceled(this.level, this.player, pos, blockState, blockEntity);
++
++                    return false;
++                }
+                 BlockState blockState1 = block.playerWillDestroy(this.level, pos, blockState, this.player);
+                 boolean flag = this.level.removeBlock(pos, false);
+                 if (SharedConstants.DEBUG_BLOCK_BREAK) {
+@@ -395,6 +_,7 @@
+                 }
+ 
+                 if (flag) {
++                    PlayerBlockBreakEvents.AFTER.invoker().afterBlockBreak(this.level, this.player, pos, blockState1, blockEntity);
+                     block.destroy(this.level, pos, blockState1);
+                 }
+ 
+@@ -441,6 +_,11 @@
+     }
+ 
+     public InteractionResult useItem(ServerPlayer player, Level level, ItemStack stack, InteractionHand hand) {
++        InteractionResult result = UseItemCallback.EVENT.invoker().interact(player, level, hand);
++
++        if (result != InteractionResult.PASS) {
++            return result;
++        }
+         if (this.gameModeForPlayer == GameType.SPECTATOR) {
+             return InteractionResult.PASS;
+         } else if (player.getCooldowns().isOnCooldown(stack)) {
+@@ -485,6 +_,11 @@
+     public InteractionHand interactHand;
+     public ItemStack interactItemStack;
+     public InteractionResult useItemOn(ServerPlayer player, Level level, ItemStack stack, InteractionHand hand, BlockHitResult hitResult) {
++        InteractionResult result = UseBlockCallback.EVENT.invoker().interact(player, level, hand, hitResult);
++
++        if (result != InteractionResult.PASS) {
++            return result;
++        }
+         BlockPos blockPos = hitResult.getBlockPos();
+         BlockState blockState = level.getBlockState(blockPos);
+         boolean cancelledBlock = false;

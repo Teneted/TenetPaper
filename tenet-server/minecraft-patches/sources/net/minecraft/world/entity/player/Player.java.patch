@@ -1,14 +1,29 @@
 --- a/net/minecraft/world/entity/player/Player.java
 +++ b/net/minecraft/world/entity/player/Player.java
-@@ -13,6 +_,8 @@
+@@ -13,6 +_,9 @@
  import java.util.function.Predicate;
  import javax.annotation.Nonnull;
  import javax.annotation.Nullable;
 +
 +import net.fabricmc.fabric.api.entity.event.v1.EntitySleepEvents;
++import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
  import net.minecraft.Util;
  import net.minecraft.core.BlockPos;
  import net.minecraft.core.Direction;
+@@ -1020,6 +_,13 @@
+     }
+ 
+     public void attack(Entity target) {
++        if ((Object) this instanceof ServerPlayer player) {
++            InteractionResult result = AttackEntityCallback.EVENT.invoker().interact(player, player.level(), InteractionHand.MAIN_HAND, target, null);
++
++            if (result != InteractionResult.PASS) {
++                return;
++            }
++        }
+         // Paper start - PlayerAttackEntityEvent
+         boolean willAttack = target.isAttackable() && !target.skipAttackInteraction(this); // Vanilla logic
+         io.papermc.paper.event.player.PrePlayerAttackEntityEvent playerAttackEntityEvent = new io.papermc.paper.event.player.PrePlayerAttackEntityEvent(
 @@ -1344,6 +_,11 @@
  
      public Either<Player.BedSleepingProblem, Unit> startSleepInBed(BlockPos bedPos, boolean force) {
