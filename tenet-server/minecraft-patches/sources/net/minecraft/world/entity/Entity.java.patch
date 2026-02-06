@@ -1,11 +1,12 @@
 --- a/net/minecraft/world/entity/Entity.java
 +++ b/net/minecraft/world/entity/Entity.java
-@@ -29,6 +_,8 @@
+@@ -29,6 +_,9 @@
  import java.util.function.Predicate;
  import java.util.stream.Stream;
  import javax.annotation.Nullable;
 +
 +import net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents;
++import net.fabricmc.fabric.impl.debug.EntityDebugSubscriptionRegistryImpl;
  import net.minecraft.BlockUtil;
  import net.minecraft.CrashReport;
  import net.minecraft.CrashReportCategory;
@@ -22,3 +23,11 @@
          } else {
              return null;
          }
+@@ -5320,6 +_,7 @@
+ 
+     @Override
+     public void registerDebugValues(ServerLevel level, DebugValueSource.Registration registrar) {
++        EntityDebugSubscriptionRegistryImpl.addDebugValues(this, registrar);
+     }
+ 
+     record EntityPathElement(Entity entity) implements ProblemReporter.PathElement {
