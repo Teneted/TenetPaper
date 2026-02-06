@@ -1,0 +1,29 @@
+--- a/net/minecraft/resources/RegistryDataLoader.java
++++ b/net/minecraft/resources/RegistryDataLoader.java
+@@ -89,7 +_,7 @@
+         Lifecycle lifecycle = optional.map(KnownPack::isVanilla).map(_boolean -> Lifecycle.stable()).orElse(Lifecycle.experimental());
+         return new RegistrationInfo(optional, lifecycle);
+     });
+-    public static final List<RegistryDataLoader.RegistryData<?>> WORLDGEN_REGISTRIES = List.of(
++    public static List<RegistryDataLoader.RegistryData<?>> WORLDGEN_REGISTRIES = List.of(
+         new RegistryDataLoader.RegistryData<>(Registries.DIMENSION_TYPE, DimensionType.DIRECT_CODEC),
+         new RegistryDataLoader.RegistryData<>(Registries.BIOME, Biome.DIRECT_CODEC),
+         new RegistryDataLoader.RegistryData<>(Registries.CHAT_TYPE, ChatType.DIRECT_CODEC),
+@@ -130,7 +_,7 @@
+     public static final List<RegistryDataLoader.RegistryData<?>> DIMENSION_REGISTRIES = List.of(
+         new RegistryDataLoader.RegistryData<>(Registries.LEVEL_STEM, LevelStem.CODEC)
+     );
+-    public static final List<RegistryDataLoader.RegistryData<?>> SYNCHRONIZED_REGISTRIES = List.of(
++    public static List<RegistryDataLoader.RegistryData<?>> SYNCHRONIZED_REGISTRIES = List.of(
+         new RegistryDataLoader.RegistryData<>(Registries.BIOME, Biome.NETWORK_CODEC),
+         new RegistryDataLoader.RegistryData<>(Registries.CHAT_TYPE, ChatType.DIRECT_CODEC),
+         new RegistryDataLoader.RegistryData<>(Registries.TRIM_PATTERN, TrimPattern.DIRECT_CODEC),
+@@ -396,7 +_,7 @@
+     }
+ 
+     public record RegistryData<T>(ResourceKey<? extends Registry<T>> key, Codec<T> elementCodec, boolean requiredNonEmpty) {
+-        RegistryData(ResourceKey<? extends Registry<T>> key, Codec<T> elementCodec) {
++        public RegistryData(ResourceKey<? extends Registry<T>> key, Codec<T> elementCodec) {
+             this(key, elementCodec, false);
+         }
+ 
