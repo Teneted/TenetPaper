@@ -1,0 +1,32 @@
+--- a/net/minecraft/core/registries/BuiltInRegistries.java
++++ b/net/minecraft/core/registries/BuiltInRegistries.java
+@@ -336,6 +_,7 @@
+     public static final Registry<MapCodec<? extends DialogBody>> DIALOG_BODY_TYPE = registerSimple(Registries.DIALOG_BODY_TYPE, DialogBodyTypes::bootstrap);
+     public static final Registry<Consumer<GameTestHelper>> TEST_FUNCTION = registerSimple(Registries.TEST_FUNCTION, BuiltinTestFunctions::bootstrap);
+     public static final Registry<? extends Registry<?>> REGISTRY = WRITABLE_REGISTRY;
++    private static boolean hasInitialised = false;
+     // Paper start - add built-in registry conversions
+     public static final io.papermc.paper.registry.data.util.Conversions STATIC_ACCESS_CONVERSIONS = new io.papermc.paper.registry.data.util.Conversions(
+         new net.minecraft.resources.RegistryOps.HolderLookupAdapter(net.minecraft.server.RegistryLayer.STATIC_ACCESS)
+@@ -381,14 +_,19 @@
+     }
+     public static void bootStrap(Runnable runnable) {
+         // Paper end
+-        REGISTRY.freeze(); // Paper - freeze main registry early
++        // REGISTRY.freeze(); // Paper - freeze main registry early // Tenet - not freeze
+         createContents();
+         runnable.run(); // Paper
+         freeze();
+         validate(REGISTRY);
+     }
+ 
+-    private static void createContents() {
++    public static void createContents() {
++        if (hasInitialised) {
++            return;
++        }
++
++        hasInitialised = true;
+         // Paper start - class-load org.bukkit.Registry
+         // we have to class-load Registry here to create all the CraftRegistry instances
+         // that will be created when Registry is class-loaded before RegistryAccess#getRegistry
