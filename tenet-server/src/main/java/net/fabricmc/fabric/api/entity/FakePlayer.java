@@ -23,6 +23,7 @@ import java.util.UUID;
 
 import com.google.common.collect.MapMaker;
 import com.mojang.authlib.GameProfile;
+import net.minecraft.world.entity.animal.horse.AbstractHorse;
 import org.jspecify.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
@@ -34,7 +35,6 @@ import net.minecraft.world.Container;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.animal.equine.AbstractHorse;
 import net.minecraft.world.level.block.entity.SignBlockEntity;
 import net.minecraft.world.scores.PlayerTeam;
 
