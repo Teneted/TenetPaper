@@ -23,7 +23,7 @@ import net.minecraft.world.level.saveddata.SavedData;
 import net.fabricmc.fabric.api.event.Event;
 import net.fabricmc.fabric.api.event.EventFactory;
 
-public final class ServerLevelEvents {
+public final class ServerWorldEvents {
 	/**
 	 * Called just after a level is loaded by a Minecraft server.
 	 *
@@ -31,7 +31,7 @@ public final class ServerLevelEvents {
 	 */
 	public static final Event<Load> LOAD = EventFactory.createArrayBacked(Load.class, callbacks -> (server, level) -> {
 		for (Load callback : callbacks) {
-			callback.onLevelLoad(server, level);
+			callback.onWorldLoad(server, level);
 		}
 	});
 
@@ -43,20 +43,20 @@ public final class ServerLevelEvents {
 	 */
 	public static final Event<Unload> UNLOAD = EventFactory.createArrayBacked(Unload.class, callbacks -> (server, level) -> {
 		for (Unload callback : callbacks) {
-			callback.onLevelUnload(server, level);
+			callback.onWorldUnload(server, level);
 		}
 	});
 
 	@FunctionalInterface
 	public interface Load {
-		void onLevelLoad(MinecraftServer server, ServerLevel level);
+		void onWorldLoad(MinecraftServer server, ServerLevel level);
 	}
 
 	@FunctionalInterface
 	public interface Unload {
-		void onLevelUnload(MinecraftServer server, ServerLevel level);
+		void onWorldUnload(MinecraftServer server, ServerLevel level);
 	}
 
-	private ServerLevelEvents() {
+	private ServerWorldEvents() {
 	}
 }

@@ -5,7 +5,7 @@
  import java.util.stream.Collectors;
  import javax.imageio.ImageIO;
 +
-+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLevelEvents;
++import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
  import net.minecraft.Optionull;
  import net.minecraft.advancements.AdvancementHolder;
  import net.minecraft.commands.CommandSourceStack;
@@ -13,7 +13,7 @@
          if (!event.callEvent()) {
              return false;
          }
-+        ServerLevelEvents.UNLOAD.invoker().onLevelUnload(console, handle);
++        ServerWorldEvents.UNLOAD.invoker().onWorldUnload(console, handle);
  
          try {
              if (save) {

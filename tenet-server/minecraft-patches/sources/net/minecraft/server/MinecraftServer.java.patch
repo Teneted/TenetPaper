@@ -1,17 +1,41 @@
 --- a/net/minecraft/server/MinecraftServer.java
 +++ b/net/minecraft/server/MinecraftServer.java
+@@ -39,7 +_,6 @@
+ import java.util.Map.Entry;
+ import java.util.concurrent.CompletableFuture;
+ import java.util.concurrent.Executor;
+-import java.util.concurrent.RejectedExecutionException;
+ import java.util.concurrent.atomic.AtomicReference;
+ import java.util.concurrent.locks.LockSupport;
+ import java.util.function.BooleanSupplier;
 @@ -48,6 +_,11 @@
  import java.util.stream.Collectors;
  import javax.annotation.Nullable;
  import javax.imageio.ImageIO;
 +
-+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLevelEvents;
++import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 +import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 +import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 +import net.fabricmc.fabric.impl.biome.modification.BiomeModificationImpl;
  import net.minecraft.CrashReport;
  import net.minecraft.CrashReportCategory;
  import net.minecraft.FileUtil;
+@@ -133,7 +_,6 @@
+ import net.minecraft.util.profiling.metrics.storage.MetricsPersister;
+ import net.minecraft.util.thread.ReentrantBlockableEventLoop;
+ import net.minecraft.world.Difficulty;
+-import net.minecraft.world.RandomSequences;
+ import net.minecraft.world.entity.ai.village.VillageSiege;
+ import net.minecraft.world.entity.npc.CatSpawner;
+ import net.minecraft.world.entity.npc.WanderingTraderSpawner;
+@@ -165,7 +_,6 @@
+ import net.minecraft.world.level.levelgen.WorldOptions;
+ import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplateManager;
+ import net.minecraft.world.level.storage.CommandStorage;
+-import net.minecraft.world.level.storage.DerivedLevelData;
+ import net.minecraft.world.level.storage.DimensionDataStorage;
+ import net.minecraft.world.level.storage.LevelData;
+ import net.minecraft.world.level.storage.LevelResource;
 @@ -559,6 +_,7 @@
          Runtime.getRuntime().addShutdownHook(new org.bukkit.craftbukkit.util.ServerShutdownThread(this));
          // CraftBukkit end
@@ -25,7 +49,7 @@
          this.initWorldBorder(serverLevelData, serverLevel);
          this.server.getPluginManager().callEvent(new org.bukkit.event.world.WorldInitEvent(serverLevel.getWorld()));
 -    // Paper end - rework world loading process
-+        ServerLevelEvents.LOAD.invoker().onLevelLoad(this, serverLevel);
++        ServerWorldEvents.LOAD.invoker().onWorldLoad(this, serverLevel);
 +        // Paper end - rework world loading process
          if (!serverLevelData.isInitialized()) {
              try {
@@ -58,7 +82,7 @@
  
          for (ServerLevel serverLevel : this.getAllLevels()) {
              if (serverLevel != null) {
-+                ServerLevelEvents.UNLOAD.invoker().onLevelUnload(this, serverLevel);
++                ServerWorldEvents.UNLOAD.invoker().onWorldUnload(this, serverLevel);
                  serverLevel.noSave = false;
              }
          }
@@ -103,6 +127,27 @@
      }
  
      private void autoSave() {
+@@ -1910,17 +_,12 @@
+ 
+     // CraftBukkit start
+     public void addLevel(ServerLevel level) {
+-        Map<ResourceKey<Level>, ServerLevel> oldLevels = this.levels;
+-        Map<ResourceKey<Level>, ServerLevel> newLevels = Maps.newLinkedHashMap(oldLevels);
+-        newLevels.put(level.dimension(), level);
+-        this.levels = Collections.unmodifiableMap(newLevels);
++        this.levels.put(level.dimension(), level);
+     }
+ 
+     public void removeLevel(ServerLevel level) {
+-        Map<ResourceKey<Level>, ServerLevel> oldLevels = this.levels;
+-        Map<ResourceKey<Level>, ServerLevel> newLevels = Maps.newLinkedHashMap(oldLevels);
+-        newLevels.remove(level.dimension());
+-        this.levels = Collections.unmodifiableMap(newLevels);
++        ServerWorldEvents.UNLOAD.invoker().onWorldUnload(((MinecraftServer) (Object) this), level); // Banner
++        this.levels.remove(level.dimension());
+     }
+     // CraftBukkit end
+ 
 @@ -2290,6 +_,7 @@
      }
  

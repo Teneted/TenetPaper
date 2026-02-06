@@ -1,12 +1,13 @@
 --- a/net/minecraft/server/level/ServerLevel.java
 +++ b/net/minecraft/server/level/ServerLevel.java
-@@ -34,6 +_,9 @@
+@@ -34,6 +_,10 @@
  import java.util.stream.Stream;
  import javax.annotation.Nonnull;
  import javax.annotation.Nullable;
 +
 +import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 +import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
++import net.fabricmc.fabric.impl.biome.modification.BiomeModificationImpl;
  import net.minecraft.CrashReport;
  import net.minecraft.CrashReportCategory;
  import net.minecraft.ReportType;
