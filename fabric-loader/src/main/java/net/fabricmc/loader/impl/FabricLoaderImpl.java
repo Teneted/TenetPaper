@@ -299,58 +299,49 @@ public final class FabricLoaderImpl extends net.fabricmc.loader.FabricLoader {
 		if (!datapackDir.exists()) {
 			datapackDir.mkdirs();
 		}
-		FabricLoader.getInstance().getAllMods().forEach(modContainer -> {
-			boolean vanilla =
-					modContainer.getMetadata().getId().equals("fabricloader")
-							|| modContainer.getMetadata().getId().equals("minecraft")
-							|| modContainer.getMetadata().getId().equals("java")
-							|| modContainer.getMetadata().getId().equals("mixinextras");
-			if (!vanilla) {
-				File modDatapacks = new File(datapackDir, modContainer.getMetadata().getId());
-				if (!modDatapacks.exists()) {
-					modDatapacks.mkdirs();
-				}
-				File mcMeta = new File(modDatapacks, "pack.mcmeta");
-				try {
-					String content = String.format(
-							"{\n" +
-									"    \"pack\": {\n" +
-									"        \"description\": \"Data pack for resources provided by %s\",\n" +
-									"        \"min_format\": [%d, %d],\n" +
-									"        \"max_format\": [%d, %d]\n" +
-									"    }\n" +
-									"}",
-							modContainer.getMetadata().getId(),
-							88, 0, 88, 0
-					);
+		File modDatapacks = new File(datapackDir, "tenet");
+		if (!modDatapacks.exists()) {
+			modDatapacks.mkdirs();
+		}
+		File mcMeta = new File(modDatapacks, "pack.mcmeta");
+		try {
+			String content = String.format(
+					"{\n" +
+							"    \"pack\": {\n" +
+							"        \"description\": \"Data pack for resources provided by %s\",\n" +
+							"        \"min_format\": [%d, %d],\n" +
+							"        \"max_format\": [%d, %d]\n" +
+							"    }\n" +
+							"}",
+					"tenet",
+					88, 0, 88, 0
+			);
 
-					java.nio.file.Files.write(
-							mcMeta.toPath(),
-							content.getBytes(java.nio.charset.StandardCharsets.UTF_8),
-							java.nio.file.StandardOpenOption.CREATE,
-							java.nio.file.StandardOpenOption.TRUNCATE_EXISTING
-					);
-				} catch (java.io.IOException ex) {
-					throw new RuntimeException(
-							"Could not initialize mod " + modContainer.getMetadata().getId() + " datapack",
-							ex
-					);
-				}
-				if (!mcMeta.exists()) {
-					mcMeta.mkdirs();
-				}
-				File[] jarFiles = new File(FabricLoader.getInstance().getGameDir().toFile(), "mods")
-						.listFiles((dir, name) -> name.endsWith(".jar"));
-				if (jarFiles == null || jarFiles.length == 0) {
-					System.out.println("Can't found any jars!");
-					return;
-				}
-				for (File jarFile : jarFiles) {
-					extractAssetsFolder(jarFile, "data", modDatapacks.toString());
-					extractAssetsFolder(jarFile, "assets", modDatapacks.toString());
-				}
-			}
-		});
+			java.nio.file.Files.write(
+					mcMeta.toPath(),
+					content.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+					java.nio.file.StandardOpenOption.CREATE,
+					java.nio.file.StandardOpenOption.TRUNCATE_EXISTING
+			);
+		} catch (java.io.IOException ex) {
+			throw new RuntimeException(
+					"Could not initialize mod " + "tenet" + " datapack",
+					ex
+			);
+		}
+		if (!mcMeta.exists()) {
+			mcMeta.mkdirs();
+		}
+		File[] jarFiles = new File(FabricLoader.getInstance().getGameDir().toFile(), "mods")
+				.listFiles((dir, name) -> name.endsWith(".jar"));
+		if (jarFiles == null || jarFiles.length == 0) {
+			System.out.println("Can't found any jars!");
+			return;
+		}
+		for (File jarFile : jarFiles) {
+			extractAssetsFolder(jarFile, "data", modDatapacks.toString());
+			extractAssetsFolder(jarFile, "assets", modDatapacks.toString());
+		}
 	}
 
 	private static void extractAssetsFolder(File jarFile, String assets, String outputDirectory) {
