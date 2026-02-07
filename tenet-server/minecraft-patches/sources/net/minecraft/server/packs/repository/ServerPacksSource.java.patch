@@ -1,0 +1,20 @@
+--- a/net/minecraft/server/packs/repository/ServerPacksSource.java
++++ b/net/minecraft/server/packs/repository/ServerPacksSource.java
+@@ -2,6 +_,7 @@
+ 
+ import com.google.common.annotations.VisibleForTesting;
+ import java.nio.file.Path;
++import java.nio.file.Paths;
+ import java.util.Optional;
+ import javax.annotation.Nullable;
+ import net.minecraft.SharedConstants;
+@@ -83,7 +_,8 @@
+     }
+ 
+     public static PackRepository createPackRepository(Path folder, DirectoryValidator validator) {
+-        return new PackRepository(validator, new ServerPacksSource(validator), new FolderRepositorySource(folder, PackType.SERVER_DATA, PackSource.WORLD, validator)); // Paper - add validator
++        return new PackRepository(validator, new ServerPacksSource(validator), new FolderRepositorySource(folder, PackType.SERVER_DATA, PackSource.WORLD, validator),
++                new FolderRepositorySource(Paths.get("mods/datapacks"), PackType.SERVER_DATA, PackSource.WORLD, validator)); // Paper - add validator
+     }
+ 
+     public static PackRepository createVanillaTrustedRepository() {

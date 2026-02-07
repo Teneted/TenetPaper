@@ -18,7 +18,9 @@ package net.fabricmc.loader.impl;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -26,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -33,7 +36,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import java.util.stream.Collectors;
+
+import net.fabricmc.loader.api.FabricLoader;
 
 import org.jetbrains.annotations.VisibleForTesting;
 import org.objectweb.asm.Opcodes;
@@ -288,6 +295,91 @@ public final class FabricLoaderImpl extends net.fabricmc.loader.FabricLoader {
 		}
 
 		modCandidates = null;
+		File datapackDir = new File(FabricLoader.getInstance().getGameDir().toFile(), "mods/datapacks");
+		if (!datapackDir.exists()) {
+			datapackDir.mkdirs();
+		}
+		FabricLoader.getInstance().getAllMods().forEach(modContainer -> {
+			boolean vanilla =
+					modContainer.getMetadata().getId().equals("fabricloader")
+							|| modContainer.getMetadata().getId().equals("minecraft")
+							|| modContainer.getMetadata().getId().equals("java")
+							|| modContainer.getMetadata().getId().equals("mixinextras");
+			if (!vanilla) {
+				File modDatapacks = new File(datapackDir, modContainer.getMetadata().getId());
+				if (!modDatapacks.exists()) {
+					modDatapacks.mkdirs();
+				}
+				File mcMeta = new File(modDatapacks, "pack.mcmeta");
+				try {
+					String content = String.format(
+							"{\n" +
+									"    \"pack\": {\n" +
+									"        \"description\": \"Data pack for resources provided by %s\",\n" +
+									"        \"min_format\": [%d, %d],\n" +
+									"        \"max_format\": [%d, %d]\n" +
+									"    }\n" +
+									"}",
+							modContainer.getMetadata().getId(),
+							88, 0, 88, 0
+					);
+
+					java.nio.file.Files.write(
+							mcMeta.toPath(),
+							content.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+							java.nio.file.StandardOpenOption.CREATE,
+							java.nio.file.StandardOpenOption.TRUNCATE_EXISTING
+					);
+				} catch (java.io.IOException ex) {
+					throw new RuntimeException(
+							"Could not initialize mod " + modContainer.getMetadata().getId() + " datapack",
+							ex
+					);
+				}
+				if (!mcMeta.exists()) {
+					mcMeta.mkdirs();
+				}
+				File[] jarFiles = new File(FabricLoader.getInstance().getGameDir().toFile(), "mods")
+						.listFiles((dir, name) -> name.endsWith(".jar"));
+				if (jarFiles == null || jarFiles.length == 0) {
+					System.out.println("Can't found any jars!");
+					return;
+				}
+				for (File jarFile : jarFiles) {
+					extractDataFolder(jarFile, modDatapacks.toString());
+				}
+			}
+		});
+
+	}
+
+	private static void extractDataFolder(File jarFile, String outputDirectory) {
+		try (JarFile jar = new JarFile(jarFile)) {
+			Enumeration<JarEntry> entries = jar.entries();
+
+			while (entries.hasMoreElements()) {
+				JarEntry entry = entries.nextElement();
+				String entryName = entry.getName();
+
+				if (entryName.startsWith("data/") && !entry.isDirectory()) {
+					String outputPath = outputDirectory + File.separator + entryName;
+					File outputFile = new File(outputPath);
+
+					outputFile.getParentFile().mkdirs();
+
+					try (InputStream in = jar.getInputStream(entry);
+						 FileOutputStream out = new FileOutputStream(outputFile)) {
+						byte[] buffer = new byte[1024];
+						int bytesRead;
+						while ((bytesRead = in.read(buffer)) != -1) {
+							out.write(buffer, 0, bytesRead);
+						}
+					}
+				}
+			}
+		} catch (IOException e) {
+			System.err.println("Errored when: " + jarFile.getName() + " - " + e.getMessage());
+		}
 	}
 
 	@VisibleForTesting
