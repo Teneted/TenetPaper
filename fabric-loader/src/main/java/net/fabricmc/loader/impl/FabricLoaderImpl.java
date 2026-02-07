@@ -346,14 +346,14 @@ public final class FabricLoaderImpl extends net.fabricmc.loader.FabricLoader {
 					return;
 				}
 				for (File jarFile : jarFiles) {
-					extractDataFolder(jarFile, modDatapacks.toString());
+					extractAssetsFolder(jarFile, "data", modDatapacks.toString());
+					extractAssetsFolder(jarFile, "assets", modDatapacks.toString());
 				}
 			}
 		});
-
 	}
 
-	private static void extractDataFolder(File jarFile, String outputDirectory) {
+	private static void extractAssetsFolder(File jarFile, String assets, String outputDirectory) {
 		try (JarFile jar = new JarFile(jarFile)) {
 			Enumeration<JarEntry> entries = jar.entries();
 
@@ -361,7 +361,7 @@ public final class FabricLoaderImpl extends net.fabricmc.loader.FabricLoader {
 				JarEntry entry = entries.nextElement();
 				String entryName = entry.getName();
 
-				if (entryName.startsWith("data/") && !entry.isDirectory()) {
+				if (entryName.startsWith(assets + "/") && !entry.isDirectory()) {
 					String outputPath = outputDirectory + File.separator + entryName;
 					File outputFile = new File(outputPath);
 
