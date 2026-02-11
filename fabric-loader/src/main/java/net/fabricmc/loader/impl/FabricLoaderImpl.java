@@ -299,9 +299,17 @@ public final class FabricLoaderImpl extends net.fabricmc.loader.FabricLoader {
 		if (!datapackDir.exists()) {
 			datapackDir.mkdirs();
 		}
+		File resourcePackDir = new File(FabricLoader.getInstance().getGameDir().toFile(), "mods/resourcepacks");
+		if (!resourcePackDir.exists()) {
+			resourcePackDir.mkdirs();
+		}
 		File modDatapacks = new File(datapackDir, "tenet");
 		if (!modDatapacks.exists()) {
 			modDatapacks.mkdirs();
+		}
+		File modResourcePacks = new File(resourcePackDir, "tenet");
+		if (!modResourcePacks.exists()) {
+			modResourcePacks.mkdirs();
 		}
 		File mcMeta = new File(modDatapacks, "pack.mcmeta");
 		try {
@@ -332,6 +340,38 @@ public final class FabricLoaderImpl extends net.fabricmc.loader.FabricLoader {
 		if (!mcMeta.exists()) {
 			mcMeta.mkdirs();
 		}
+
+		File resMcMeta = new File(modResourcePacks, "pack.mcmeta");
+		try {
+			String content = String.format(
+					"{\n" +
+							"    \"pack\": {\n" +
+							"        \"description\": \"Resource pack for resources provided by %s\",\n" +
+							"        \"pack_format\": 15,\n" +
+							"		 \"supported_formats\": [15, 255],\n" +
+							"        \"min_format\": 15,\n" +
+							"        \"max_format\": 255\n" +
+							"    }\n" +
+							"}",
+					"tenet"
+			);
+
+			java.nio.file.Files.write(
+					resMcMeta.toPath(),
+					content.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+					java.nio.file.StandardOpenOption.CREATE,
+					java.nio.file.StandardOpenOption.TRUNCATE_EXISTING
+			);
+		} catch (java.io.IOException ex) {
+			throw new RuntimeException(
+					"Could not initialize mod " + "tenet" + " resourcePack",
+					ex
+			);
+		}
+		if (!resMcMeta.exists()) {
+			resMcMeta.mkdirs();
+		}
+
 		File[] jarFiles = new File(FabricLoader.getInstance().getGameDir().toFile(), "mods")
 				.listFiles((dir, name) -> name.endsWith(".jar"));
 		if (jarFiles == null || jarFiles.length == 0) {
@@ -340,7 +380,7 @@ public final class FabricLoaderImpl extends net.fabricmc.loader.FabricLoader {
 		}
 		for (File jarFile : jarFiles) {
 			extractAssetsFolder(jarFile, "data", modDatapacks.toString());
-			extractAssetsFolder(jarFile, "assets", modDatapacks.toString());
+			extractAssetsFolder(jarFile, "assets", modResourcePacks.toString());
 		}
 	}
 

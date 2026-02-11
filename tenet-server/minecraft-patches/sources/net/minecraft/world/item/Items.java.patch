@@ -1,0 +1,20 @@
+--- a/net/minecraft/world/item/Items.java
++++ b/net/minecraft/world/item/Items.java
+@@ -58,6 +_,8 @@
+ import net.minecraft.world.level.block.state.properties.TestBlockMode;
+ import net.minecraft.world.level.material.Fluids;
+ import net.minecraft.world.waypoints.Waypoint;
++import org.bukkit.Bukkit;
++import org.teneted.tenet.event.RegisterEvents;
+ 
+ public class Items {
+     public static final Item AIR = registerBlock(Blocks.AIR, AirItem::new);
+@@ -2473,7 +_,7 @@
+         if (item instanceof BlockItem blockItem) {
+             blockItem.registerBlocks(Item.BY_BLOCK, item);
+         }
+-
++        RegisterEvents.REGISTER_ITEM.invoker().register();
+         return Registry.register(BuiltInRegistries.ITEM, key, item);
+     }
+ }
